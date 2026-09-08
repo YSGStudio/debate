@@ -1,0 +1,20 @@
+-- 0001_init.sql 되돌리기. 데이터가 전부 사라진다.
+begin;
+drop function if exists open_session_atomic(uuid);
+drop function if exists dashboard_snapshot(uuid);
+drop table if exists rate_limits;
+drop table if exists debate_scores;
+drop table if exists moderation_flags;
+drop table if exists messages;
+drop table if exists participations;
+drop table if exists debate_sessions;
+drop table if exists students;
+drop table if exists classes;
+drop table if exists invite_codes;
+drop table if exists teachers;
+drop type if exists score_status;
+drop type if exists triage_verdict;
+drop type if exists message_role;
+drop type if exists stance;
+drop type if exists session_status;
+commit;

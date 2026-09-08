@@ -1,0 +1,28 @@
+@import "tailwindcss";
+
+:root {
+  --background: #f7f8fa;
+  --foreground: #1a1d21;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+}
+
+html,
+body {
+  background: var(--background);
+  color: var(--foreground);
+  -webkit-text-size-adjust: 100%;
+}
+
+/* 학생 화면은 교실 태블릿이 1차 대상이다. 터치 타겟과 글자를 크게 잡는다. */
+.student-scope {
+  font-size: 17px;
+}
+@media (max-width: 640px) {
+  .student-scope {
+    font-size: 16px;
+  }
+}
