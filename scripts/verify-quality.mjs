@@ -392,24 +392,35 @@ async function main() {
   } else if (scored.status !== "done") {
     check("AC22", false, `상태=${scored.status} ${scored.error ?? ""}`);
   } else {
-    const parts = [scored.score_evidence, scored.score_listening, scored.score_development, scored.score_expression];
-    const sum = parts.reduce((a, b) => a + b, 0);
+    const AREA_MAX = { score_claim: 15, score_evidence: 25, score_counter: 25, score_development: 25, score_participation: 10 };
+    const parts = Object.entries(AREA_MAX).map(([k, max]) => ({ k, v: scored[k], max }));
+    const sum = parts.reduce((a, p) => a + p.v, 0);
+    const penalty = scored.off_topic_penalty ?? 0;
+
     check("AC22-a", Number(elapsed) <= 60, `${elapsed}초 만에 채점 완료 (60초 이내여야 함)`);
-    check("AC22-b", parts.every((p) => p >= 1 && p <= 5) && scored.total === sum,
-      `항목 ${parts.join("/")} 합=${sum}, 저장된 총점=${scored.total}`);
-    check("AC22-c", Array.isArray(scored.strengths) && scored.strengths.length === 2 && scored.next_step?.length > 0,
-      `잘한 점 ${scored.strengths?.length}개, 다음에 해볼 것 ${scored.next_step ? "있음" : "없음"}`);
+    check("AC22-b", parts.every((p) => p.v >= 0 && p.v <= p.max),
+      `영역 점수 ${parts.map((p) => `${p.v}/${p.max}`).join(" ")}`);
+    check("AC22-c", scored.base_total === sum,
+      `기본 점수 합산 정확 (${sum} === 저장된 ${scored.base_total})`);
+    check("AC22-d", scored.total === Math.max(0, sum + penalty),
+      `최종 = 기본 ${scored.base_total} + 감점 ${penalty} = ${scored.total}`);
+    check("AC22-e", penalty >= -15 && penalty <= 0, `감점 범위 ${penalty} (-15~0)`);
+    check("AC22-f", Array.isArray(scored.strengths) && scored.strengths.length >= 1 && scored.next_step?.length > 0,
+      `잘한 점 ${scored.strengths?.length}개, 더 발전시킬 점 ${scored.next_step ? "있음" : "없음"}`);
+    check("AC22-g", scored.analysis && scored.change_summary,
+      `참여 분석 ${JSON.stringify(scored.analysis)} / 생각의 변화 "${scored.change_summary}"`);
+
     console.log(`    잘한 점: ${(scored.strengths ?? []).join(" / ")}`);
-    console.log(`    다음에 해볼 것: ${scored.next_step}`);
-    console.log(`    항목별 이유: ${JSON.stringify(scored.reasons, null, 0).slice(0, 200)}`);
+    console.log(`    더 발전시키면 좋은 점: ${scored.next_step}`);
+    console.log(`    생각의 변화: ${scored.change_summary} — ${scored.change_reason}`);
     transcripts.push({ label: "AC22 채점 결과", turns: [], replies: [JSON.stringify(scored, null, 2)] });
   }
 
   // 학생 화면에서 점수가 보이는가 (R53)
   const resultRes = await probeStudent.agent.fetch(`/api/debate/result?sessionId=${classes[4].sess.id}`);
   const result = await resultRes.json();
-  check("AC22-d", result.score?.status === "done" && result.score.total > 0,
-    `학생 화면 점수 ${result.score?.total}/20, 항목 ${JSON.stringify(result.score?.scores)}`);
+  check("AC22-h", result.score?.status === "done" && result.score.total >= 0,
+    `학생 화면 점수 ${result.score?.total}/100, 항목 ${JSON.stringify(result.score?.scores)}`);
 
   // 결과
   console.log("\n" + "=".repeat(64));

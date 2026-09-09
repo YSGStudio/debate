@@ -3,13 +3,14 @@
 import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
-const LABEL: Record<string, string> = {
-  evidence: "근거 대기",
-  listening: "상대 말에 답하기",
-  development: "생각 이어가기",
-  expression: "알기 쉽게 말하기",
-};
-const ORDER = ["evidence", "listening", "development", "expression"];
+/** scoring.ts 의 AREAS 와 같은 순서·배점을 쓴다. */
+const AREAS = [
+  { key: "claim", label: "주장 표현", max: 15 },
+  { key: "evidence", label: "근거의 적절성과 구체성", max: 25 },
+  { key: "counter", label: "반론 이해와 대응", max: 25 },
+  { key: "development", label: "생각의 발전과 조정", max: 25 },
+  { key: "participation", label: "토론 참여와 답변 충실성", max: 10 },
+] as const;
 
 interface ResultData {
   topic: string;
@@ -18,6 +19,8 @@ interface ResultData {
   score: {
     status: "pending" | "done" | "failed" | "skipped";
     total: number | null;
+    baseTotal: number | null;
+    offTopicPenalty: number | null;
     scores: Record<string, number | null> | null;
     reasons: Record<string, string> | null;
     strengths: string[] | null;
@@ -25,12 +28,16 @@ interface ResultData {
   } | null;
 }
 
-function Stars({ n }: { n: number }) {
+/** 영역 점수를 막대로 보여준다. 숫자만 보는 것보다 어디가 부족한지 한눈에 들어온다. */
+function Bar({ value, max }: { value: number; max: number }) {
+  const pct = Math.round((value / max) * 100);
   return (
-    <span className="text-lg tracking-tight" aria-label={`${n}점`}>
-      {"★".repeat(n)}
-      <span className="text-gray-300">{"★".repeat(5 - n)}</span>
-    </span>
+    <div className="mt-1 h-2 w-full overflow-hidden rounded-full bg-gray-200">
+      <div
+        className={`h-full rounded-full ${pct >= 80 ? "bg-green-500" : pct >= 50 ? "bg-blue-500" : "bg-amber-500"}`}
+        style={{ width: `${pct}%` }}
+      />
+    </div>
   );
 }
 
@@ -53,7 +60,6 @@ function ResultInner() {
       }
       const body = (await res.json()) as ResultData;
       setData(body);
-      // 채점이 끝날 때까지 기다린다.
       if (!body.score || body.score.status === "pending") setTimeout(poll, 3000);
     }
     void poll();
@@ -65,6 +71,7 @@ function ResultInner() {
 
   const score = data.score;
   const done = score?.status === "done";
+  const penalty = score?.offTopicPenalty ?? 0;
 
   return (
     <main className="student-scope mx-auto max-w-lg px-5 py-10">
@@ -96,23 +103,42 @@ function ResultInner() {
             <p className="text-sm opacity-90">내 토론 점수</p>
             <p className="text-4xl font-bold">
               {score.total}
-              <span className="text-xl font-normal"> / 20점</span>
+              <span className="text-xl font-normal"> / 100점</span>
             </p>
+            {penalty < 0 && (
+              <p className="mt-2 text-sm opacity-90">
+                기본 {score.baseTotal}점 · 주제에서 벗어나 {penalty}점
+              </p>
+            )}
           </div>
 
           <div className="mt-4 rounded-2xl bg-white p-5 shadow-sm">
-            {ORDER.map((k) => (
-              <div key={k} className="mb-3 last:mb-0">
-                <div className="flex items-center justify-between">
-                  <span className="font-bold">{LABEL[k]}</span>
-                  <Stars n={score.scores?.[k] ?? 0} />
+            {AREAS.map((a) => {
+              const v = score.scores?.[a.key] ?? 0;
+              return (
+                <div key={a.key} className="mb-4 last:mb-0">
+                  <div className="flex items-baseline justify-between">
+                    <span className="font-bold">{a.label}</span>
+                    <span className="text-sm">
+                      <span className="text-lg font-bold">{v}</span>
+                      <span className="text-gray-500"> / {a.max}</span>
+                    </span>
+                  </div>
+                  <Bar value={v} max={a.max} />
+                  {score.reasons?.[a.key] && (
+                    <p className="mt-1 text-sm text-gray-600">{score.reasons[a.key]}</p>
+                  )}
                 </div>
-                {score.reasons?.[k] && (
-                  <p className="mt-1 text-sm text-gray-600">{score.reasons[k]}</p>
-                )}
-              </div>
-            ))}
+              );
+            })}
           </div>
+
+          {penalty < 0 && score.reasons?.offTopic && (
+            <div className="mt-3 rounded-2xl bg-orange-50 p-5">
+              <p className="mb-1 font-bold text-orange-900">주제 이탈 {penalty}점</p>
+              <p className="text-orange-900">{score.reasons.offTopic}</p>
+            </div>
+          )}
 
           {score.strengths && score.strengths.length > 0 && (
             <div className="mt-4 rounded-2xl bg-green-50 p-5">
@@ -125,7 +151,7 @@ function ResultInner() {
 
           {score.nextStep && (
             <div className="mt-3 rounded-2xl bg-amber-50 p-5">
-              <p className="mb-1 font-bold text-amber-900">다음에 해볼 것</p>
+              <p className="mb-1 font-bold text-amber-900">더 발전시키면 좋은 점</p>
               <p className="text-amber-900">{score.nextStep}</p>
             </div>
           )}

@@ -112,23 +112,30 @@ create table if not exists moderation_flags (
 );
 
 -- ── 채점 (R45~R57) ────────────────────────────────────────────────────────
+-- 5영역 100점 + 주제 이탈 감점 (0 ~ -15). 최종 = 기본 + 감점.
 create table if not exists debate_scores (
-  id                 uuid primary key default gen_random_uuid(),
-  participation_id   uuid not null unique references participations(id) on delete cascade,
-  status             score_status not null default 'pending',
-  score_evidence     int check (score_evidence between 1 and 5),
-  score_listening    int check (score_listening between 1 and 5),
-  score_development  int check (score_development between 1 and 5),
-  score_expression   int check (score_expression between 1 and 5),
-  total              int check (total between 4 and 20),
-  reasons            jsonb,
-  strengths          jsonb,
-  next_step          text,
-  model              text,
-  attempts           int not null default 0,
-  error              text,
-  created_at         timestamptz not null default now(),
-  updated_at         timestamptz not null default now()
+  id                  uuid primary key default gen_random_uuid(),
+  participation_id    uuid not null unique references participations(id) on delete cascade,
+  status              score_status not null default 'pending',
+  score_claim         int check (score_claim between 0 and 15),          -- 주장 표현
+  score_evidence      int check (score_evidence between 0 and 25),       -- 근거의 적절성과 구체성
+  score_counter       int check (score_counter between 0 and 25),        -- 반론 이해와 대응
+  score_development   int check (score_development between 0 and 25),    -- 생각의 발전과 조정
+  score_participation int check (score_participation between 0 and 10),  -- 토론 참여와 답변 충실성
+  off_topic_penalty   int check (off_topic_penalty between -15 and 0),
+  base_total          int check (base_total between 0 and 100),
+  total               int check (total between 0 and 100),
+  reasons             jsonb,   -- 영역별 한 줄 평가
+  strengths           jsonb,   -- 잘한 점
+  next_step           text,    -- 더 발전시키면 좋은 점
+  analysis            jsonb,   -- 토론 참여 분석 (근거 제시/반론 대응/단답식/주제 집중)
+  change_summary      text,    -- 생각의 변화
+  change_reason       text,
+  model               text,
+  attempts            int not null default 0,
+  error               text,
+  created_at          timestamptz not null default now(),
+  updated_at          timestamptz not null default now()
 );
 
 -- ── 전송 속도 제한 (R38) ──────────────────────────────────────────────────

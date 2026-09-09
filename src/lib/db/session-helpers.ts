@@ -23,6 +23,8 @@ export interface StudentDebateState {
   score: {
     status: "pending" | "done" | "failed" | "skipped";
     total: number | null;
+    baseTotal: number | null;
+    offTopicPenalty: number | null;
     scores: Record<string, number> | null;
     reasons: Record<string, string> | null;
     strengths: string[] | null;
@@ -93,13 +95,16 @@ export async function getOwnedClassless(
       ? {
           status: scoreRow.status,
           total: scoreRow.total,
+          baseTotal: scoreRow.base_total,
+          offTopicPenalty: scoreRow.off_topic_penalty,
           scores:
             scoreRow.status === "done"
               ? {
+                  claim: scoreRow.score_claim ?? 0,
                   evidence: scoreRow.score_evidence ?? 0,
-                  listening: scoreRow.score_listening ?? 0,
+                  counter: scoreRow.score_counter ?? 0,
                   development: scoreRow.score_development ?? 0,
-                  expression: scoreRow.score_expression ?? 0,
+                  participation: scoreRow.score_participation ?? 0,
                 }
               : null,
           reasons: scoreRow.reasons,

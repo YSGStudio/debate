@@ -3,7 +3,9 @@ import { admin } from "@/lib/supabase/admin";
 import { UNIQUE_VIOLATION, type ScoreRow } from "./types";
 
 const COLS =
-  "id, participation_id, status, score_evidence, score_listening, score_development, score_expression, total, reasons, strengths, next_step, model, attempts, error";
+  "id, participation_id, status, score_claim, score_evidence, score_counter, score_development, " +
+  "score_participation, off_topic_penalty, base_total, total, reasons, strengths, next_step, " +
+  "analysis, change_summary, change_reason, model, attempts, error";
 
 /**
  * 채점 착수권을 가져온다 (R57).
@@ -57,14 +59,20 @@ export async function setFailed(participationId: string, message: string): Promi
 }
 
 export interface ScorePayload {
+  claim: number;
   evidence: number;
-  listening: number;
+  counter: number;
   development: number;
-  expression: number;
+  participation: number;
+  offTopicPenalty: number;
+  baseTotal: number;
   total: number;
   reasons: Record<string, string>;
   strengths: string[];
   nextStep: string;
+  analysis: Record<string, string>;
+  changeSummary: string;
+  changeReason: string;
   model: string;
 }
 
@@ -73,14 +81,20 @@ export async function setDone(participationId: string, p: ScorePayload): Promise
     .from("debate_scores")
     .update({
       status: "done",
+      score_claim: p.claim,
       score_evidence: p.evidence,
-      score_listening: p.listening,
+      score_counter: p.counter,
       score_development: p.development,
-      score_expression: p.expression,
+      score_participation: p.participation,
+      off_topic_penalty: p.offTopicPenalty,
+      base_total: p.baseTotal,
       total: p.total,
       reasons: p.reasons,
       strengths: p.strengths,
       next_step: p.nextStep,
+      analysis: p.analysis,
+      change_summary: p.changeSummary,
+      change_reason: p.changeReason,
       model: p.model,
       error: null,
       updated_at: new Date().toISOString(),
@@ -95,5 +109,5 @@ export async function getScore(participationId: string): Promise<ScoreRow | null
     .select(COLS)
     .eq("participation_id", participationId)
     .maybeSingle();
-  return (data as ScoreRow) ?? null;
+  return (data as unknown as ScoreRow) ?? null;
 }

@@ -55,18 +55,32 @@ export interface MessageRow {
   created_at: string;
 }
 
+export interface ScoreAnalysis {
+  evidence: string;
+  counter: string;
+  shortAnswers: string;
+  focus: string;
+}
+
+/** 5영역 100점 + 주제 이탈 감점 (0 ~ -15) */
 export interface ScoreRow {
   id: string;
   participation_id: string;
   status: ScoreStatus;
+  score_claim: number | null;
   score_evidence: number | null;
-  score_listening: number | null;
+  score_counter: number | null;
   score_development: number | null;
-  score_expression: number | null;
+  score_participation: number | null;
+  off_topic_penalty: number | null;
+  base_total: number | null;
   total: number | null;
   reasons: Record<string, string> | null;
   strengths: string[] | null;
   next_step: string | null;
+  analysis: ScoreAnalysis | null;
+  change_summary: string | null;
+  change_reason: string | null;
   model: string | null;
   attempts: number;
   error: string | null;

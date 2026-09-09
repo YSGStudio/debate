@@ -37,16 +37,28 @@ function fixture(): ReportData {
       ]).flat(),
       score: {
         status: "done",
-        total: 16,
-        scores: { evidence: 4, listening: 3, development: 4, expression: 5 },
+        total: 71,
+        baseTotal: 76,
+        offTopicPenalty: -5,
+        scores: { claim: 12, evidence: 18, counter: 16, development: 20, participation: 10 },
         reasons: {
-          evidence: "이유를 두 가지나 말했어요.",
-          listening: "질문에 대답을 잘했어요.",
-          development: "생각이 점점 깊어졌어요.",
-          expression: "문장이 아주 잘 읽혀요.",
+          claim: "입장이 분명했어요.",
+          evidence: "이유를 두 가지 들었어요.",
+          counter: "반론에 대부분 답했어요.",
+          development: "새 근거를 더했어요.",
+          participation: "끝까지 성실하게 답했어요.",
+          offTopic: "급식 이야기를 두 번 했어요.",
         },
         strengths: ["이유를 잘 댔어", "끝까지 생각했어"],
         nextStep: "다음에는 예를 하나 더 들어보자",
+        analysis: {
+          evidence: "보통",
+          counter: "보통",
+          shortAnswers: "일부 있음",
+          focus: "일부 이탈",
+        },
+        changeSummary: "의견을 유지하면서 근거가 강화됨",
+        changeReason: "처음 주장에 새 근거를 더했어요.",
       },
     })),
   };
@@ -91,12 +103,21 @@ describe("PDF 생성 (R34, R35, AC16)", () => {
     for (const name of ["김하늘", "이바다", "박구름", "최나무", "정별빛"]) {
       expect(all, `${name} 누락`).toContain(name);
     }
-    expect(all).toContain("토론 점수");
-    for (const label of ["근거 대기", "상대 말에 답하기", "생각 이어가기", "알기 쉽게 말하기"]) {
+    expect(all).toContain("최종 점수");
+    expect(all).toContain("기본 점수");
+    expect(all).toContain("주제 이탈 감점");
+    expect(all).toContain("생각의 변화");
+    for (const label of [
+      "주장 표현",
+      "근거의 적절성과 구체성",
+      "반론 이해와 대응",
+      "생각의 발전과 조정",
+      "토론 참여와 답변 충실성",
+    ]) {
       expect(all).toContain(label);
     }
     expect(all).toContain("잘한 점");
-    expect(all).toContain("다음에 해볼 것");
+    expect(all).toContain("더 발전시키면 좋은 점");
     expect(all).toContain("[주제에서 벗어남]");
     expect(all).toContain("[부적절한 표현]");
     expect(all).toContain("초등 4학년"); // 표지의 학년 표시 (R44)

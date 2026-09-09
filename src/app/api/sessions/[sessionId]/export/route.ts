@@ -50,15 +50,21 @@ export async function GET(_req: Request, ctx: { params: Promise<{ sessionId: str
         ? {
             status: score.status,
             total: score.total,
+            baseTotal: score.base_total,
+            offTopicPenalty: score.off_topic_penalty,
             scores: {
+              claim: score.score_claim,
               evidence: score.score_evidence,
-              listening: score.score_listening,
+              counter: score.score_counter,
               development: score.score_development,
-              expression: score.score_expression,
+              participation: score.score_participation,
             },
             reasons: score.reasons,
             strengths: score.strengths,
             nextStep: score.next_step,
+            analysis: score.analysis,
+            changeSummary: score.change_summary,
+            changeReason: score.change_reason,
           }
         : null,
     });

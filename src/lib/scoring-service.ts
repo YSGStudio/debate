@@ -43,14 +43,20 @@ export async function runScoring(
     });
 
     await setDone(participationId, {
+      claim: result.scores.claim,
       evidence: result.scores.evidence,
-      listening: result.scores.listening,
+      counter: result.scores.counter,
       development: result.scores.development,
-      expression: result.scores.expression,
+      participation: result.scores.participation,
+      offTopicPenalty: result.offTopicPenalty,
+      baseTotal: result.baseTotal,
       total: result.total,
-      reasons: result.reasons,
+      reasons: { ...result.reasons, offTopic: result.offTopicReason },
       strengths: result.strengths,
       nextStep: result.nextStep,
+      analysis: result.analysis,
+      changeSummary: result.changeSummary,
+      changeReason: result.changeReason,
       model: result.model,
     });
     return "done";

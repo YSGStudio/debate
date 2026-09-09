@@ -2,7 +2,7 @@ import "server-only";
 import path from "node:path";
 import React from "react";
 import { Document, Font, Page, StyleSheet, Text, View, renderToBuffer } from "@react-pdf/renderer";
-import { SCORE_KEYS, SCORE_LABEL } from "@/lib/prompts/scoring";
+import { AREAS, BASE_TOTAL_MAX } from "@/lib/prompts/scoring";
 
 let registered = false;
 function registerFonts() {
@@ -28,10 +28,15 @@ export interface ReportStudent {
   score: {
     status: string;
     total: number | null;
+    baseTotal: number | null;
+    offTopicPenalty: number | null;
     scores: Record<string, number | null>;
     reasons: Record<string, string> | null;
     strengths: string[] | null;
     nextStep: string | null;
+    analysis: { evidence: string; counter: string; shortAnswers: string; focus: string } | null;
+    changeSummary: string | null;
+    changeReason: string | null;
   } | null;
 }
 
@@ -66,7 +71,7 @@ const s = StyleSheet.create({
   studentHeader: { fontSize: 14, fontWeight: 700, marginBottom: 2 },
   sub: { fontSize: 9, color: "#555555", marginBottom: 8 },
   row: { flexDirection: "row", marginBottom: 2 },
-  cellLabel: { width: 130, color: "#555555" },
+  cellLabel: { width: 170, color: "#555555" },
   bubbleStudent: { marginBottom: 5, paddingLeft: 8, borderLeftWidth: 2, borderLeftColor: "#2563eb" },
   bubbleBot: { marginBottom: 5, paddingLeft: 8, borderLeftWidth: 2, borderLeftColor: "#9ca3af" },
   flagOff: { backgroundColor: "#fef3c7" },
@@ -85,21 +90,49 @@ function ScoreBlock({ score }: { score: ReportStudent["score"] }) {
   if (score.status === "failed") return <Text style={s.sub}>채점에 실패했습니다.</Text>;
   if (score.status !== "done") return <Text style={s.sub}>채점 중입니다.</Text>;
 
+  const penalty = score.offTopicPenalty ?? 0;
+
   return (
     <View style={s.scoreBox}>
-      <Text style={s.scoreTotal}>토론 점수 {score.total} / 20점</Text>
-      {SCORE_KEYS.map((k) => (
-        <View key={k} style={s.row}>
+      <Text style={s.scoreTotal}>
+        최종 점수 {score.total} / {BASE_TOTAL_MAX}점
+      </Text>
+      <Text style={s.sub}>
+        기본 점수 {score.baseTotal ?? "-"} / {BASE_TOTAL_MAX}점 · 주제 이탈 감점 {penalty}점
+      </Text>
+
+      {AREAS.map((a) => (
+        <View key={a.key} style={s.row}>
           <Text style={s.cellLabel}>
-            {SCORE_LABEL[k]} {score.scores?.[k] ?? "-"}점
+            {a.label} {score.scores?.[a.key] ?? "-"} / {a.max}
           </Text>
-          <Text style={{ flex: 1 }}>{score.reasons?.[k] ?? ""}</Text>
+          <Text style={{ flex: 1 }}>{score.reasons?.[a.key] ?? ""}</Text>
         </View>
       ))}
+      {penalty < 0 && score.reasons?.offTopic ? (
+        <View style={s.row}>
+          <Text style={s.cellLabel}>주제 이탈 {penalty}</Text>
+          <Text style={{ flex: 1 }}>{score.reasons.offTopic}</Text>
+        </View>
+      ) : null}
+
       {score.strengths && score.strengths.length > 0 ? (
         <Text style={{ marginTop: 4 }}>잘한 점: {score.strengths.join(" / ")}</Text>
       ) : null}
-      {score.nextStep ? <Text>다음에 해볼 것: {score.nextStep}</Text> : null}
+      {score.nextStep ? <Text>더 발전시키면 좋은 점: {score.nextStep}</Text> : null}
+
+      {score.analysis ? (
+        <Text style={{ marginTop: 4 }}>
+          근거 제시 {score.analysis.evidence} · 반론 대응 {score.analysis.counter} ·
+          단답식 {score.analysis.shortAnswers} · 주제 집중 {score.analysis.focus}
+        </Text>
+      ) : null}
+      {score.changeSummary ? (
+        <Text>
+          생각의 변화: {score.changeSummary}
+          {score.changeReason ? ` — ${score.changeReason}` : ""}
+        </Text>
+      ) : null}
     </View>
   );
 }
@@ -130,7 +163,7 @@ function Report({ data }: { data: ReportData }) {
         </Text>
         <Text style={s.meta}>
           채점 완료 {data.summary.scoredCount}명, 반 평균{" "}
-          {data.summary.averageTotal != null ? `${data.summary.averageTotal} / 20점` : "-"}
+          {data.summary.averageTotal != null ? `${data.summary.averageTotal} / ${BASE_TOTAL_MAX}점` : "-"}
         </Text>
       </Page>
 
