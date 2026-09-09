@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { GRADE_LEVELS } from "@/lib/grade-presets";
-import DeleteButton from "../../delete-button";
+import ArchiveButton from "../../archive-button";
 
 interface ClassRow {
   id: string; name: string; grade_level: number; join_code: string; single_active_session: boolean;
@@ -92,12 +92,11 @@ export default function ClassPage() {
           학년을 바꿔도 이미 만든 토론에는 영향을 주지 않습니다. 새로 만드는 토론부터 적용됩니다.
         </p>
 
-        <div className="mt-4 border-t pt-4">
-          <DeleteButton
-            url={`/api/classes/${classId}`}
-            label={data.class.name}
-            onDeleted={() => router.push("/teacher")}
-          />
+        <div className="mt-4 flex items-center gap-3 border-t pt-4">
+          <ArchiveButton url={`/api/classes/${classId}`} onDone={() => router.push("/teacher")} />
+          <span className="text-xs text-gray-500">
+            보관하면 학생이 코드로 들어올 수 없습니다. 보관함에서 되돌리거나 완전히 지울 수 있습니다.
+          </span>
         </div>
       </section>
 
@@ -148,11 +147,7 @@ export default function ClassPage() {
                 <button onClick={() => router.push(`/teacher/sessions/${s.id}`)}
                   className="rounded-lg border px-3 py-1.5 text-sm">대시보드</button>
                 {s.status !== "open" && (
-                  <DeleteButton
-                    url={`/api/sessions/${s.id}`}
-                    label={s.topic}
-                    onDeleted={load}
-                  />
+                  <ArchiveButton url={`/api/sessions/${s.id}`} onDone={load} />
                 )}
               </div>
             </li>

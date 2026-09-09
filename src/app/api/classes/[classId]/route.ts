@@ -1,12 +1,21 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { classDeletionImpact, deleteClass, getOwnedClass, updateClass } from "@/lib/db/classes";
+import {
+  archiveClass,
+  classDeletionImpact,
+  deleteClass,
+  getOwnedClass,
+  restoreClass,
+  updateClass,
+} from "@/lib/db/classes";
 import { listStudents } from "@/lib/db/students";
 import { listSessions } from "@/lib/db/sessions";
 import { isErr, jsonError, notFound, readJson, requireTeacher } from "@/lib/api";
 import { GRADE_LEVELS } from "@/lib/grade-presets";
 
 const Patch = z.object({
+  /** 보관함으로 보내거나 되돌린다 */
+  action: z.enum(["archive", "restore"]).optional(),
   name: z.string().min(1).max(40).optional(),
   gradeLevel: z
     .number()
@@ -60,6 +69,11 @@ export async function DELETE(req: Request, ctx: { params: Promise<{ classId: str
     );
   }
 
+  // 완전 삭제는 보관함에 들어 있는 것만. 목록에서 한 번에 사라지지 않게 한다.
+  if (!cls.archived_at) {
+    return jsonError("먼저 보관함으로 옮겨 주세요.", 409, { needsArchive: true });
+  }
+
   const ok = await deleteClass(auth.teacherId, classId);
   if (!ok) return jsonError("학급을 지우지 못했습니다.", 500);
   return NextResponse.json({ deleted: true, impact });
@@ -73,6 +87,31 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ classId: stri
 
   const parsed = Patch.safeParse(await readJson<unknown>(req));
   if (!parsed.success) return jsonError(parsed.error.issues[0]?.message ?? "입력을 확인해 주세요.", 400);
+
+  const cls = await getOwnedClass(auth.teacherId, classId);
+  if (!cls) return notFound();
+
+  if (parsed.data.action === "archive") {
+    // 진행 중인 토론이 있으면 보관하지 않는다. 보관하면 학급 코드가 죽어서
+    // 대화하던 학생이 그대로 튕긴다.
+    const impact = await classDeletionImpact(classId, cls.name);
+    if (impact.openTopics.length > 0) {
+      return jsonError(
+        `진행 중인 토론이 있습니다: "${impact.openTopics[0]}". 먼저 토론을 종료해 주세요.`,
+        409,
+        { openTopics: impact.openTopics },
+      );
+    }
+    const ok = await archiveClass(auth.teacherId, classId);
+    if (!ok) return jsonError("보관하지 못했습니다.", 409);
+    return NextResponse.json({ archived: true });
+  }
+
+  if (parsed.data.action === "restore") {
+    const ok = await restoreClass(auth.teacherId, classId);
+    if (!ok) return jsonError("되돌리지 못했습니다.", 409);
+    return NextResponse.json({ restored: true });
+  }
 
   const patch: Record<string, unknown> = {};
   if (parsed.data.name !== undefined) patch.name = parsed.data.name;

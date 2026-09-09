@@ -18,6 +18,7 @@ export default async function TeacherLayout({ children }: { children: React.Reac
         <div className="mx-auto flex max-w-5xl items-center justify-between px-5 py-3">
           <Link href="/teacher" className="font-bold">토론 친구 · 선생님</Link>
           <div className="flex items-center gap-3 text-sm text-gray-600">
+            <Link href="/teacher/archive" className="hover:underline">보관함</Link>
             <span>{teacher.name} 선생님</span>
             <LogoutButton />
           </div>

@@ -16,7 +16,11 @@ const state = {
   messageCount: 0,
   scoredCount: 0,
   studentCount: 0,
+  classArchived: null as string | null,
+  sessionArchived: null as string | null,
   deleted: [] as string[],
+  archived: [] as string[],
+  restored: [] as string[],
 };
 
 vi.mock("@/lib/api", async (importOriginal) => {
@@ -71,24 +75,41 @@ vi.mock("@/lib/supabase/admin", () => {
   return { admin: () => ({ from }) };
 });
 
-const CLASS = {
+const CLASS = () => ({
   id: "class-1", teacher_id: "teacher-a", name: "4학년 2반", grade_level: 4,
-  join_code: "123456", single_active_session: true, created_at: "", archived_at: null,
-};
+  join_code: "123456", single_active_session: true, created_at: "",
+  archived_at: state.classArchived,
+});
 
 vi.mock("@/lib/db/classes", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/db/classes")>();
   return {
     ...actual,
-    getOwnedClass: async (teacherId: string) => (teacherId === state.owner ? CLASS : null),
-    deleteClass: async () => { state.deleted.push("classes"); return true; },
+    getOwnedClass: async (teacherId: string) => (teacherId === state.owner ? CLASS() : null),
+    deleteClass: async () => {
+      if (!state.classArchived) return false; // 보관함에 있는 것만 지운다
+      state.deleted.push("classes");
+      return true;
+    },
+    archiveClass: async () => {
+      if (state.classArchived) return false;
+      state.classArchived = "2026-01-01T00:00:00Z";
+      state.archived.push("classes");
+      return true;
+    },
+    restoreClass: async () => {
+      if (!state.classArchived) return false;
+      state.classArchived = null;
+      state.restored.push("classes");
+      return true;
+    },
   };
 });
 
 const SESSION = () => ({
   id: "sess-1", class_id: "class-1", topic: "숙제는 없어져야 한다", description: null,
   grade_level: 4, status: state.sessionStatus, message_limit: 30,
-  opened_at: null, closed_at: null, created_at: "",
+  opened_at: null, closed_at: null, archived_at: state.sessionArchived, created_at: "",
 });
 
 vi.mock("@/lib/db/sessions", async (importOriginal) => {
@@ -97,18 +118,42 @@ vi.mock("@/lib/db/sessions", async (importOriginal) => {
     ...actual,
     getOwnedSession: async (teacherId: string) =>
       teacherId === state.owner ? { session: SESSION(), className: "4학년 2반", classId: "class-1" } : null,
+    archiveSession: async () => {
+      if (state.sessionStatus === "open" || state.sessionArchived) return false;
+      state.sessionArchived = "2026-01-01T00:00:00Z";
+      state.archived.push("debate_sessions");
+      return true;
+    },
+    restoreSession: async () => {
+      if (!state.sessionArchived) return false;
+      state.sessionArchived = null;
+      state.restored.push("debate_sessions");
+      return true;
+    },
+    deleteSession: async () => {
+      if (state.sessionStatus === "open" || !state.sessionArchived) return false;
+      state.deleted.push("debate_sessions");
+      return true;
+    },
   };
 });
 
 vi.mock("@/lib/scoring-service", () => ({ scoreWholeSession: async () => {}, runScoring: async () => "done" }));
 
-const { DELETE: deleteClassRoute } = await import("@/app/api/classes/[classId]/route");
-const { DELETE: deleteSessionRoute } = await import("@/app/api/sessions/[sessionId]/route");
+const { DELETE: deleteClassRoute, PATCH: patchClassRoute } = await import("@/app/api/classes/[classId]/route");
+const { DELETE: deleteSessionRoute, PATCH: patchSessionRoute } = await import("@/app/api/sessions/[sessionId]/route");
 
 const classCtx = { params: Promise.resolve({ classId: "class-1" }) };
 const sessCtx = { params: Promise.resolve({ sessionId: "sess-1" }) };
 const req = (preview = false) =>
   new Request(`http://localhost/x${preview ? "?preview=1" : ""}`, { method: "DELETE" });
+
+const patch = (action: string) =>
+  new Request("http://localhost/x", {
+    method: "PATCH",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ action }),
+  });
 
 beforeEach(() => {
   state.teacher = "teacher-a";
@@ -119,7 +164,11 @@ beforeEach(() => {
   state.messageCount = 12;
   state.scoredCount = 2;
   state.studentCount = 25;
+  state.classArchived = "2026-01-01T00:00:00Z";   // 기본은 보관된 상태
+  state.sessionArchived = "2026-01-01T00:00:00Z";
   state.deleted = [];
+  state.archived = [];
+  state.restored = [];
 });
 
 describe("학급 삭제", () => {
@@ -176,6 +225,67 @@ describe("학급 삭제", () => {
     const { impact } = await (await deleteClassRoute(req(true), classCtx)).json();
     expect(impact).toMatchObject({ sessionCount: 0, messageCount: 0 });
     expect((await deleteClassRoute(req(), classCtx)).status).toBe(200);
+  });
+});
+
+describe("보관함", () => {
+  it("보관하지 않은 학급은 완전 삭제되지 않는다", async () => {
+    state.classArchived = null;
+    const res = await deleteClassRoute(req(), classCtx);
+    expect(res.status).toBe(409);
+    const body = await res.json();
+    expect(body.error).toContain("먼저 보관함으로 옮겨 주세요");
+    expect(body.needsArchive).toBe(true);
+    expect(state.deleted).toEqual([]);
+  });
+
+  it("보관하지 않은 토론은 완전 삭제되지 않는다", async () => {
+    state.sessionArchived = null;
+    const res = await deleteSessionRoute(req(), sessCtx);
+    expect(res.status).toBe(409);
+    expect((await res.json()).needsArchive).toBe(true);
+    expect(state.deleted).toEqual([]);
+  });
+
+  it("학급을 보관했다가 되돌릴 수 있다", async () => {
+    state.classArchived = null;
+    expect((await patchClassRoute(patch("archive"), classCtx)).status).toBe(200);
+    expect(state.classArchived).not.toBeNull();
+
+    expect((await patchClassRoute(patch("restore"), classCtx)).status).toBe(200);
+    expect(state.classArchived).toBeNull();
+  });
+
+  it("토론을 보관했다가 되돌릴 수 있다", async () => {
+    state.sessionArchived = null;
+    expect((await patchSessionRoute(patch("archive"), sessCtx)).status).toBe(200);
+    expect(state.sessionArchived).not.toBeNull();
+
+    expect((await patchSessionRoute(patch("restore"), sessCtx)).status).toBe(200);
+    expect(state.sessionArchived).toBeNull();
+  });
+
+  it("진행 중인 토론은 보관하지 않는다", async () => {
+    state.sessionArchived = null;
+    state.sessionStatus = "open";
+    const res = await patchSessionRoute(patch("archive"), sessCtx);
+    expect(res.status).toBe(409);
+    expect((await res.json()).error).toContain("먼저 종료해 주세요");
+    expect(state.sessionArchived).toBeNull();
+  });
+
+  it("진행 중인 토론이 있으면 학급도 보관하지 않는다", async () => {
+    state.classArchived = null;
+    state.sessions = [{ id: "sess-1", topic: "진행 중 토론", status: "open" }];
+    const res = await patchClassRoute(patch("archive"), classCtx);
+    expect(res.status).toBe(409);
+    expect((await res.json()).openTopics).toEqual(["진행 중 토론"]);
+    expect(state.classArchived).toBeNull();
+  });
+
+  it("남의 학급은 보관할 수 없다 (R4)", async () => {
+    state.teacher = "teacher-b";
+    expect((await patchClassRoute(patch("archive"), classCtx)).status).toBe(404);
   });
 });
 

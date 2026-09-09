@@ -72,6 +72,7 @@ create table if not exists debate_sessions (
   message_limit int  not null default 30 check (message_limit between 3 and 100),
   opened_at     timestamptz,
   closed_at     timestamptz,
+  archived_at   timestamptz,                 -- 보관함 (완전 삭제 전 단계)
   created_at    timestamptz not null default now()
 );
 
@@ -141,7 +142,7 @@ create index if not exists idx_classes_teacher        on classes(teacher_id);
 create index if not exists idx_classes_join_code      on classes(join_code);
 create index if not exists idx_students_class         on students(class_id);
 create index if not exists idx_sessions_class         on debate_sessions(class_id);
-create index if not exists idx_sessions_open          on debate_sessions(class_id) where status = 'open';
+create index if not exists idx_sessions_open          on debate_sessions(class_id) where status = 'open' and archived_at is null;
 create index if not exists idx_participations_session on participations(session_id);
 create index if not exists idx_messages_participation on messages(participation_id, seq);
 create index if not exists idx_flags_participation    on moderation_flags(participation_id);

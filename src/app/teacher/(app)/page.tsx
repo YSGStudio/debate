@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { GRADE_LEVELS, DEFAULT_GRADE } from "@/lib/grade-presets";
-import DeleteButton from "./delete-button";
+import ArchiveButton from "./archive-button";
 
 interface ClassRow {
   id: string;
@@ -63,12 +63,7 @@ export default function TeacherHome() {
                   <p className="text-sm text-gray-500">초등 {c.grade_level}학년</p>
                   <p className="mt-2 font-mono text-2xl tracking-widest">{c.join_code}</p>
                 </Link>
-                <DeleteButton
-                  url={`/api/classes/${c.id}`}
-                  label={c.name}
-                  onDeleted={load}
-                  className="mt-3"
-                />
+                <ArchiveButton url={`/api/classes/${c.id}`} onDone={load} className="mt-3" />
               </li>
             ))}
           </ul>

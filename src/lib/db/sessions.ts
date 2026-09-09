@@ -3,7 +3,7 @@ import { admin } from "@/lib/supabase/admin";
 import type { SessionRow } from "./types";
 
 const COLS =
-  "id, class_id, topic, description, grade_level, status, message_limit, opened_at, closed_at, created_at";
+  "id, class_id, topic, description, grade_level, status, message_limit, opened_at, closed_at, archived_at, created_at";
 
 export async function createSession(
   classId: string,
@@ -28,13 +28,57 @@ export async function createSession(
   return data as SessionRow;
 }
 
+/** 보관하지 않은 토론만 (보관된 것은 보관함에서 본다) */
 export async function listSessions(classId: string): Promise<SessionRow[]> {
   const { data } = await admin()
     .from("debate_sessions")
     .select(COLS)
     .eq("class_id", classId)
+    .is("archived_at", null)
     .order("created_at", { ascending: false });
   return (data ?? []) as SessionRow[];
+}
+
+/** 보관함에 들어 있는 토론. 학급이 보관되지 않은 것만 (학급째 보관되면 학급 항목으로 본다) */
+export async function listArchivedSessions(
+  teacherId: string,
+): Promise<(SessionRow & { class_name: string })[]> {
+  const { data } = await admin()
+    .from("debate_sessions")
+    .select(`${COLS}, classes!inner(name, teacher_id, archived_at)`)
+    .not("archived_at", "is", null)
+    .order("archived_at", { ascending: false });
+
+  const rows = (data ?? []) as unknown as (SessionRow & {
+    classes: { name: string; teacher_id: string; archived_at: string | null };
+  })[];
+
+  return rows
+    .filter((r) => r.classes.teacher_id === teacherId && r.classes.archived_at === null)
+    .map((r) => ({ ...r, class_name: r.classes.name }));
+}
+
+/** 보관함으로 보낸다. 진행 중인 토론은 보관하지 않는다 (학생 화면이 멈춘다). */
+export async function archiveSession(sessionId: string): Promise<boolean> {
+  const { data } = await admin()
+    .from("debate_sessions")
+    .update({ archived_at: new Date().toISOString() })
+    .eq("id", sessionId)
+    .neq("status", "open")
+    .is("archived_at", null)
+    .select("id");
+  return Array.isArray(data) && data.length > 0;
+}
+
+/** 보관함에서 되돌린다 */
+export async function restoreSession(sessionId: string): Promise<boolean> {
+  const { data } = await admin()
+    .from("debate_sessions")
+    .update({ archived_at: null })
+    .eq("id", sessionId)
+    .not("archived_at", "is", null)
+    .select("id");
+  return Array.isArray(data) && data.length > 0;
 }
 
 export async function getSession(sessionId: string): Promise<SessionRow | null> {
@@ -66,6 +110,7 @@ export async function listOpenSessions(classId: string): Promise<SessionRow[]> {
     .select(COLS)
     .eq("class_id", classId)
     .eq("status", "open")
+    .is("archived_at", null)
     .order("opened_at", { ascending: false });
   return (data ?? []) as SessionRow[];
 }
@@ -144,16 +189,20 @@ export async function sessionDeletionImpact(session: SessionRow): Promise<Sessio
 }
 
 /**
- * 토론 삭제. FK 가 cascade 이므로 참여·메시지·판정·채점이 함께 사라진다.
- * 진행 중인 토론은 지우지 않는다 — 대화하던 학생 화면이 그대로 멈춰버린다.
+ * 완전 삭제. FK 가 cascade 이므로 참여·메시지·판정·채점이 함께 사라진다.
+ *
+ * **보관함에 들어 있는 것만 지운다.** 목록에서 한 번의 실수로 사라지지 않도록
+ * 보관 → 완전 삭제 두 단계를 강제한다.
  */
 export async function deleteSession(sessionId: string): Promise<boolean> {
-  const { error } = await admin()
+  const { data } = await admin()
     .from("debate_sessions")
     .delete()
     .eq("id", sessionId)
-    .neq("status", "open");
-  return !error;
+    .neq("status", "open")
+    .not("archived_at", "is", null)
+    .select("id");
+  return Array.isArray(data) && data.length > 0;
 }
 
 /** open -> closed. closed 에서 다시 열 수 없다 (R10) */

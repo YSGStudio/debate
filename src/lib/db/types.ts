@@ -32,6 +32,8 @@ export interface SessionRow {
   message_limit: number;
   opened_at: string | null;
   closed_at: string | null;
+  /** 보관함에 들어간 시각. null 이면 목록에 보인다. */
+  archived_at: string | null;
   created_at: string;
 }
 

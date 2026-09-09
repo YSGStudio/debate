@@ -1,11 +1,13 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import {
+  archiveSession,
   closeSession,
   deleteSession,
   getOwnedSession,
   getSession,
   openSessionAtomic,
+  restoreSession,
   sessionDeletionImpact,
   updateDraftSession,
 } from "@/lib/db/sessions";
@@ -15,7 +17,7 @@ import { isErr, jsonError, notFound, readJson, requireTeacher } from "@/lib/api"
 import { GRADE_LEVELS } from "@/lib/grade-presets";
 
 const Body = z.object({
-  action: z.enum(["open", "close", "update"]),
+  action: z.enum(["open", "close", "update", "archive", "restore"]),
   topic: z.string().min(1).max(100).optional(),
   description: z.string().max(300).nullable().optional(),
   gradeLevel: z
@@ -49,6 +51,11 @@ export async function DELETE(req: Request, ctx: { params: Promise<{ sessionId: s
     return jsonError("진행 중인 토론입니다. 먼저 종료해 주세요.", 409);
   }
 
+  // 완전 삭제는 보관함에 들어 있는 것만. 목록에서 한 번에 사라지지 않게 한다.
+  if (!owned.session.archived_at) {
+    return jsonError("먼저 보관함으로 옮겨 주세요.", 409, { needsArchive: true });
+  }
+
   const ok = await deleteSession(sessionId);
   if (!ok) return jsonError("토론을 지우지 못했습니다.", 500);
   return NextResponse.json({ deleted: true, impact });
@@ -64,6 +71,21 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ sessionId: st
 
   const parsed = Body.safeParse(await readJson<unknown>(req));
   if (!parsed.success) return jsonError("입력을 확인해 주세요.", 400);
+
+  if (parsed.data.action === "archive") {
+    if (owned.session.status === "open") {
+      return jsonError("진행 중인 토론입니다. 먼저 종료해 주세요.", 409);
+    }
+    const ok = await archiveSession(sessionId);
+    if (!ok) return jsonError("보관하지 못했습니다.", 409);
+    return NextResponse.json({ archived: true });
+  }
+
+  if (parsed.data.action === "restore") {
+    const ok = await restoreSession(sessionId);
+    if (!ok) return jsonError("되돌리지 못했습니다.", 409);
+    return NextResponse.json({ restored: true });
+  }
 
   if (parsed.data.action === "update") {
     if (owned.session.status !== "draft") {

@@ -33,7 +33,10 @@ export async function listClasses(teacherId: string): Promise<ClassRow[]> {
   return (data ?? []) as ClassRow[];
 }
 
-/** 소유권 검사를 겸한다. 남의 학급이면 null (R4) */
+/**
+ * 소유권 검사를 겸한다. 남의 학급이면 null (R4).
+ * 보관된 학급도 돌려준다 — 보관함에서 복원·삭제하려면 조회할 수 있어야 한다.
+ */
 export async function getOwnedClass(teacherId: string, classId: string): Promise<ClassRow | null> {
   const { data } = await admin()
     .from("classes")
@@ -139,17 +142,59 @@ export async function classDeletionImpact(classId: string, className: string): P
   };
 }
 
+/** 보관함에 들어 있는 학급 */
+export async function listArchivedClasses(teacherId: string): Promise<ClassRow[]> {
+  const { data } = await admin()
+    .from("classes")
+    .select(CLASS_COLS)
+    .eq("teacher_id", teacherId)
+    .not("archived_at", "is", null)
+    .order("archived_at", { ascending: false });
+  return (data ?? []) as ClassRow[];
+}
+
 /**
- * 학급 삭제. FK 가 cascade 이므로 학생·토론·대화·채점이 모두 사라진다.
- * 진행 중인 토론이 있으면 지우지 않는다 (호출부에서 먼저 확인한다).
+ * 보관함으로 보낸다.
+ * 보관하면 학급 코드로 학생이 들어올 수 없다 (findClassByJoinCode 가 걸러낸다).
+ */
+export async function archiveClass(teacherId: string, classId: string): Promise<boolean> {
+  const { data } = await admin()
+    .from("classes")
+    .update({ archived_at: new Date().toISOString() })
+    .eq("id", classId)
+    .eq("teacher_id", teacherId)
+    .is("archived_at", null)
+    .select("id");
+  return Array.isArray(data) && data.length > 0;
+}
+
+/** 보관함에서 되돌린다. 학급 코드가 다시 살아난다. */
+export async function restoreClass(teacherId: string, classId: string): Promise<boolean> {
+  const { data } = await admin()
+    .from("classes")
+    .update({ archived_at: null })
+    .eq("id", classId)
+    .eq("teacher_id", teacherId)
+    .not("archived_at", "is", null)
+    .select("id");
+  return Array.isArray(data) && data.length > 0;
+}
+
+/**
+ * 완전 삭제. FK 가 cascade 이므로 학생·토론·대화·채점이 모두 사라진다.
+ *
+ * **보관함에 들어 있는 것만 지운다.** 목록에서 한 번의 실수로 사라지지 않도록
+ * 보관 → 완전 삭제 두 단계를 강제한다.
  */
 export async function deleteClass(teacherId: string, classId: string): Promise<boolean> {
-  const { error } = await admin()
+  const { data } = await admin()
     .from("classes")
     .delete()
     .eq("id", classId)
-    .eq("teacher_id", teacherId);
-  return !error;
+    .eq("teacher_id", teacherId)
+    .not("archived_at", "is", null)
+    .select("id");
+  return Array.isArray(data) && data.length > 0;
 }
 
 export async function findClassByJoinCode(code: string): Promise<ClassRow | null> {
