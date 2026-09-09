@@ -59,7 +59,7 @@ async function main() {
   if (!classId) {
     const { data: cls, error: ce } = await db
       .from("classes")
-      .insert({ teacher_id: teacherId!, name: "4학년 2반", grade_level: 4, join_code: "DEMO24" })
+      .insert({ teacher_id: teacherId!, name: "4학년 2반", grade_level: 4, join_code: "204020" })
       .select("id, join_code").single();
     if (ce) { console.error("학급 생성 실패:", ce.message); process.exit(1); }
     classId = (cls as { id: string }).id;

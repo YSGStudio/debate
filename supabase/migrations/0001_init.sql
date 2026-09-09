@@ -45,7 +45,7 @@ create table if not exists classes (
   teacher_id            uuid not null references teachers(id) on delete cascade,
   name                  text not null,
   grade_level           int  not null default 4 check (grade_level between 3 and 6),
-  join_code             char(6) not null unique,
+  join_code             char(6) not null unique,   -- 숫자 6자리 (R5)
   single_active_session boolean not null default true,
   created_at            timestamptz not null default now(),
   archived_at           timestamptz

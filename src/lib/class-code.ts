@@ -1,7 +1,12 @@
 import { randomInt } from "node:crypto";
 
-/** 혼동되는 글자(0 O 1 I L)를 뺀 알파벳 (PRD R5) */
-export const CODE_ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
+/**
+ * 학급 코드는 숫자 6자리다 (PRD R5).
+ *
+ * 초등학생이 칠판을 보고 그대로 옮겨 적어야 하므로 숫자만 쓴다.
+ * 알파벳을 섞으면 대소문자·유사 글자 때문에 저학년이 자주 틀린다.
+ */
+export const CODE_ALPHABET = "0123456789";
 export const CODE_LENGTH = 6;
 
 export function generateClassCode(rand: (max: number) => number = (m) => randomInt(m)): string {
@@ -10,8 +15,9 @@ export function generateClassCode(rand: (max: number) => number = (m) => randomI
   return out;
 }
 
+/** 공백·하이픈을 걷어낸다. 아이가 "123 456" 이나 "123-456" 으로 적어도 통하게 한다. */
 export function normalizeClassCode(input: string): string {
-  return input.trim().toUpperCase().replace(/\s|-/g, "");
+  return input.trim().replace(/[\s-]/g, "");
 }
 
 export function isValidClassCode(input: string): boolean {

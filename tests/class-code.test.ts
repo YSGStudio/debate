@@ -9,26 +9,35 @@ import {
 import { invalidNames, parseRoster } from "@/lib/roster";
 
 describe("학급 코드 (R5)", () => {
-  it("혼동되는 글자를 쓰지 않는다", () => {
-    for (const ch of "01OIL") expect(CODE_ALPHABET).not.toContain(ch);
+  it("숫자만 쓴다 — 초등학생이 칠판을 보고 옮겨 적기 쉬워야 한다", () => {
+    expect(CODE_ALPHABET).toBe("0123456789");
   });
 
-  it("6자리를 만든다", () => {
-    for (let i = 0; i < 200; i++) {
+  it("숫자 6자리를 만든다", () => {
+    for (let i = 0; i < 500; i++) {
       const c = generateClassCode();
       expect(c).toHaveLength(CODE_LENGTH);
+      expect(c).toMatch(/^[0-9]{6}$/);
       expect(isValidClassCode(c)).toBe(true);
     }
   });
 
-  it("소문자와 공백을 정규화한다", () => {
-    expect(normalizeClassCode(" abc 234 ")).toBe("ABC234");
-    expect(normalizeClassCode("abc-234")).toBe("ABC234");
+  it("모든 자릿수가 실제로 쓰인다 (0 이나 9 가 빠지지 않는다)", () => {
+    const seen = new Set<string>();
+    for (let i = 0; i < 2000; i++) for (const ch of generateClassCode()) seen.add(ch);
+    expect(seen.size).toBe(10);
+  });
+
+  it("공백과 하이픈을 걷어낸다", () => {
+    expect(normalizeClassCode(" 123 456 ")).toBe("123456");
+    expect(normalizeClassCode("123-456")).toBe("123456");
   });
 
   it("잘못된 코드를 거른다", () => {
-    expect(isValidClassCode("ABC23")).toBe(false);
-    expect(isValidClassCode("ABC2O4")).toBe(false); // O 는 알파벳에 없다
+    expect(isValidClassCode("12345")).toBe(false);   // 5자리
+    expect(isValidClassCode("1234567")).toBe(false); // 7자리
+    expect(isValidClassCode("ABC234")).toBe(false);  // 알파벳
+    expect(isValidClassCode("12A456")).toBe(false);
     expect(isValidClassCode("")).toBe(false);
   });
 });
