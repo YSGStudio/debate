@@ -75,6 +75,83 @@ export async function rotateJoinCode(teacherId: string, classId: string): Promis
   throw new Error("학급 코드를 만들지 못했습니다. 다시 시도해 주세요.");
 }
 
+export interface ClassImpact {
+  className: string;
+  studentCount: number;
+  sessionCount: number;
+  openTopics: string[];
+  messageCount: number;
+  scoredCount: number;
+}
+
+/**
+ * 학급을 지울 때 함께 사라지는 것을 센다.
+ * 학급 → 학생 → 참여 → 메시지 순으로 전부 cascade 된다.
+ */
+export async function classDeletionImpact(classId: string, className: string): Promise<ClassImpact> {
+  const [{ count: studentCount }, { data: sessions }] = await Promise.all([
+    admin().from("students").select("id", { count: "exact", head: true }).eq("class_id", classId),
+    admin().from("debate_sessions").select("id, topic, status").eq("class_id", classId),
+  ]);
+
+  const rows = (sessions ?? []) as { id: string; topic: string; status: string }[];
+  const openTopics = rows.filter((s) => s.status === "open").map((s) => s.topic);
+
+  if (rows.length === 0) {
+    return {
+      className,
+      studentCount: studentCount ?? 0,
+      sessionCount: 0,
+      openTopics,
+      messageCount: 0,
+      scoredCount: 0,
+    };
+  }
+
+  const { data: parts } = await admin()
+    .from("participations")
+    .select("id")
+    .in("session_id", rows.map((s) => s.id));
+  const ids = ((parts ?? []) as { id: string }[]).map((p) => p.id);
+
+  let messageCount = 0;
+  let scoredCount = 0;
+  if (ids.length > 0) {
+    const [m, sc] = await Promise.all([
+      admin().from("messages").select("id", { count: "exact", head: true }).in("participation_id", ids),
+      admin()
+        .from("debate_scores")
+        .select("id", { count: "exact", head: true })
+        .in("participation_id", ids)
+        .eq("status", "done"),
+    ]);
+    messageCount = m.count ?? 0;
+    scoredCount = sc.count ?? 0;
+  }
+
+  return {
+    className,
+    studentCount: studentCount ?? 0,
+    sessionCount: rows.length,
+    openTopics,
+    messageCount,
+    scoredCount,
+  };
+}
+
+/**
+ * 학급 삭제. FK 가 cascade 이므로 학생·토론·대화·채점이 모두 사라진다.
+ * 진행 중인 토론이 있으면 지우지 않는다 (호출부에서 먼저 확인한다).
+ */
+export async function deleteClass(teacherId: string, classId: string): Promise<boolean> {
+  const { error } = await admin()
+    .from("classes")
+    .delete()
+    .eq("id", classId)
+    .eq("teacher_id", teacherId);
+  return !error;
+}
+
 export async function findClassByJoinCode(code: string): Promise<ClassRow | null> {
   const { data } = await admin()
     .from("classes")

@@ -2,9 +2,11 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import {
   closeSession,
+  deleteSession,
   getOwnedSession,
   getSession,
   openSessionAtomic,
+  sessionDeletionImpact,
   updateDraftSession,
 } from "@/lib/db/sessions";
 import { scoreWholeSession } from "@/lib/scoring-service";
@@ -23,6 +25,34 @@ const Body = z.object({
     .optional(),
   messageLimit: z.number().int().min(3).max(100).optional(),
 });
+
+/**
+ * 토론 삭제. 참여·대화·판정·채점이 함께 사라진다.
+ * `?preview=1` 이면 지우지 않고 무엇이 사라지는지만 돌려준다.
+ */
+export async function DELETE(req: Request, ctx: { params: Promise<{ sessionId: string }> }) {
+  const auth = await requireTeacher();
+  if (isErr(auth)) return auth.response;
+  const { sessionId } = await ctx.params;
+
+  const owned = await getOwnedSession(auth.teacherId, sessionId);
+  if (!owned) return notFound();
+
+  const impact = await sessionDeletionImpact(owned.session);
+
+  if (new URL(req.url).searchParams.get("preview") === "1") {
+    return NextResponse.json({ impact });
+  }
+
+  // 진행 중인 토론은 지우지 않는다. 대화하던 학생 화면이 그대로 멈춘다.
+  if (owned.session.status === "open") {
+    return jsonError("진행 중인 토론입니다. 먼저 종료해 주세요.", 409);
+  }
+
+  const ok = await deleteSession(sessionId);
+  if (!ok) return jsonError("토론을 지우지 못했습니다.", 500);
+  return NextResponse.json({ deleted: true, impact });
+}
 
 export async function PATCH(req: Request, ctx: { params: Promise<{ sessionId: string }> }) {
   const auth = await requireTeacher();

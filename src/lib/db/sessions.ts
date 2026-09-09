@@ -102,6 +102,60 @@ export async function openSessionAtomic(
   return { result: row.result, conflictTopic: row.conflict_topic };
 }
 
+export interface SessionImpact {
+  topic: string;
+  status: SessionRow["status"];
+  joinedStudents: number;
+  messageCount: number;
+  scoredCount: number;
+}
+
+/**
+ * 토론을 지울 때 함께 사라지는 것을 센다.
+ * 교사가 "삭제" 를 누르기 전에 무엇을 잃는지 정확히 알아야 한다.
+ */
+export async function sessionDeletionImpact(session: SessionRow): Promise<SessionImpact> {
+  const { data: parts } = await admin()
+    .from("participations")
+    .select("id")
+    .eq("session_id", session.id);
+  const ids = ((parts ?? []) as { id: string }[]).map((p) => p.id);
+
+  if (ids.length === 0) {
+    return { topic: session.topic, status: session.status, joinedStudents: 0, messageCount: 0, scoredCount: 0 };
+  }
+
+  const [{ count: messageCount }, { count: scoredCount }] = await Promise.all([
+    admin().from("messages").select("id", { count: "exact", head: true }).in("participation_id", ids),
+    admin()
+      .from("debate_scores")
+      .select("id", { count: "exact", head: true })
+      .in("participation_id", ids)
+      .eq("status", "done"),
+  ]);
+
+  return {
+    topic: session.topic,
+    status: session.status,
+    joinedStudents: ids.length,
+    messageCount: messageCount ?? 0,
+    scoredCount: scoredCount ?? 0,
+  };
+}
+
+/**
+ * 토론 삭제. FK 가 cascade 이므로 참여·메시지·판정·채점이 함께 사라진다.
+ * 진행 중인 토론은 지우지 않는다 — 대화하던 학생 화면이 그대로 멈춰버린다.
+ */
+export async function deleteSession(sessionId: string): Promise<boolean> {
+  const { error } = await admin()
+    .from("debate_sessions")
+    .delete()
+    .eq("id", sessionId)
+    .neq("status", "open");
+  return !error;
+}
+
 /** open -> closed. closed 에서 다시 열 수 없다 (R10) */
 export async function closeSession(sessionId: string): Promise<SessionRow | null> {
   const { data } = await admin()

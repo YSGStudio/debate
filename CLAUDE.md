@@ -17,7 +17,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 npm run dev            # 개발 서버
 npm run typecheck      # tsc --noEmit
 npm run lint           # eslint
-npm test               # vitest run (13파일 106개)
+npm test               # vitest run
 npm run build
 
 npm run db:migrate           # supabase/migrations 의 up 파일을 번호순으로 적용
@@ -83,6 +83,11 @@ npm run verify:quality # 실제 OpenAI 를 불러 챗봇·판정·채점 품질 
   `void promise` 로 두면 서버리스에서 판정·채점이 조용히 유실된다.
 - **학생 삭제는 그 학생의 모든 참여를 본다** (`removeOrDeactivateStudent`).
   참여 하나만 보고 판단하면 다른 세션 기록이 cascade 로 함께 지워진다.
+- **학급·토론 삭제는 미리보기를 먼저 준다.** `DELETE ...?preview=1` 은 지우지 않고
+  사라질 것(학생 수, 토론 수, 대화 건수, 채점 건수)만 돌려준다. UI 는 이 숫자를 보여준
+  뒤에만 실제 삭제를 호출한다. FK 가 전부 cascade 라 되돌릴 수 없다.
+- **진행 중(`open`)인 토론은 지우지 않는다.** 대화하던 학생 화면이 그대로 멈춘다.
+  세션 삭제는 `.neq("status","open")` 으로 DB 레벨에서도 막는다.
 - **채점 프롬프트에 `moderation_flags` 를 넘기지 않는다** (R50). 태도(이탈·부적절)와
   토론 능력은 별개 축이라는 명시적 결정이다.
 - **학생 응답에 반 평균·순위·타 학생 정보를 담지 않는다** (R53).

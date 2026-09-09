@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { GRADE_LEVELS } from "@/lib/grade-presets";
+import DeleteButton from "../../delete-button";
 
 interface ClassRow {
   id: string; name: string; grade_level: number; join_code: string; single_active_session: boolean;
@@ -90,6 +91,14 @@ export default function ClassPage() {
         <p className="mt-2 text-xs text-gray-500">
           학년을 바꿔도 이미 만든 토론에는 영향을 주지 않습니다. 새로 만드는 토론부터 적용됩니다.
         </p>
+
+        <div className="mt-4 border-t pt-4">
+          <DeleteButton
+            url={`/api/classes/${classId}`}
+            label={data.class.name}
+            onDeleted={() => router.push("/teacher")}
+          />
+        </div>
       </section>
 
       <section className="rounded-2xl border bg-white p-5">
@@ -138,6 +147,13 @@ export default function ClassPage() {
                 )}
                 <button onClick={() => router.push(`/teacher/sessions/${s.id}`)}
                   className="rounded-lg border px-3 py-1.5 text-sm">대시보드</button>
+                {s.status !== "open" && (
+                  <DeleteButton
+                    url={`/api/sessions/${s.id}`}
+                    label={s.topic}
+                    onDeleted={load}
+                  />
+                )}
               </div>
             </li>
           ))}

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { GRADE_LEVELS, DEFAULT_GRADE } from "@/lib/grade-presets";
+import DeleteButton from "./delete-button";
 
 interface ClassRow {
   id: string;
@@ -56,13 +57,18 @@ export default function TeacherHome() {
         ) : (
           <ul className="grid gap-3 sm:grid-cols-2">
             {classes.map((c) => (
-              <li key={c.id}>
-                <Link href={`/teacher/classes/${c.id}`}
-                  className="block rounded-2xl border bg-white p-5 hover:border-blue-400">
+              <li key={c.id} className="rounded-2xl border bg-white p-5">
+                <Link href={`/teacher/classes/${c.id}`} className="block hover:opacity-70">
                   <p className="text-lg font-bold">{c.name}</p>
                   <p className="text-sm text-gray-500">초등 {c.grade_level}학년</p>
                   <p className="mt-2 font-mono text-2xl tracking-widest">{c.join_code}</p>
                 </Link>
+                <DeleteButton
+                  url={`/api/classes/${c.id}`}
+                  label={c.name}
+                  onDeleted={load}
+                  className="mt-3"
+                />
               </li>
             ))}
           </ul>
