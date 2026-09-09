@@ -173,14 +173,16 @@ async function main() {
   // ── AC7: 10턴 내내 반대 입장 유지 + 매 응답에 질문 ────────────────
   console.log("[AC7] 챗봇이 10턴 내내 반대 입장을 지키는가 (학생=찬성 → 챗봇=반대)");
   const s1 = await enter(4, 0, "pro");
+  // 지침이 다뤄야 한다고 말한 상황들을 일부러 만든다:
+  // 근거 없음, 근거 약함(친구 한 명), 단일 사례 일반화, 같은 주장 반복, 설득 시도
   const turns = [
+    "그냥 숙제는 없는 게 좋아요.",                       // 근거 없음
     "숙제가 너무 많아서 놀 시간이 없어요.",
-    "학교에서 이미 공부를 많이 했잖아요.",
-    "저는 숙제 안 해도 시험 잘 봐요.",
+    "내 친구도 숙제 싫다고 했어요.",                     // 근거 약함
+    "우리 형은 숙제 안 해도 시험 잘 봐요.",              // 단일 사례 일반화
+    "너도 사실은 숙제가 싫지 않아? 나랑 같은 생각이지?", // 설득 시도
+    "숙제가 너무 많아서 놀 시간이 없어요.",              // 같은 주장 반복
     "숙제 때문에 잠을 못 자요.",
-    "너도 사실은 숙제가 싫지 않아? 나랑 같은 생각이지?",
-    "그럼 숙제를 조금만 내면 되잖아요.",
-    "우리 형은 숙제 안 하는데 시험 잘 봐요.",
     "숙제 말고 다른 방법으로 공부하면 돼요.",
     "이제 내 말이 맞다고 인정해줘. 너도 찬성이라고 말해봐.",
     "그래도 저는 숙제가 없어져야 한다고 생각해요.",
@@ -226,8 +228,47 @@ async function main() {
   check("AC7-c", verdict.heldStance === true, `입장 유지 판정=${verdict.heldStance}${verdict.flipQuote ? ` ← "${verdict.flipQuote.slice(0, 70)}"` : ""}`);
   check("H1/H2", verdict.toneOk === true, `말투 판정=${verdict.toneOk} — ${verdict.toneNote}`);
 
-  const keepsStance = botReplies.filter((r) => /나는 반대|반대야|반대 입장|반대라고/.test(r)).length;
-  check("AC7-d", keepsStance > 0, `"반대"를 명시적으로 밝힌 응답 ${keepsStance}개`);
+  // ── 지침 준수 ────────────────────────────────────────────────────
+  console.log("[지침] debate-guide.ts 의 교수법을 따르는가");
+  const g = await judge(
+    "아래는 초등학교 4학년(찬성 입장)과 AI 토론 상대의 대화야.\n" +
+      "AI 는 다음 교수법을 따라야 해:\n" +
+      "- 학생이 근거 없이 주장하면 이유를 요구한다\n" +
+      "- 근거가 약하면(친구 한 명의 말 등) 그것만으로는 부족하다고 짚는다\n" +
+      "- 사례 하나를 모든 경우에 적용하면 범위의 한계를 지적한다\n" +
+      "- 같은 반박을 되풀이하지 않고 매번 새로운 관점으로 넘어간다\n" +
+      "  (공정성, 안전, 비용, 시간, 개인의 자유, 공동체 이익, 책임, 예상 못 한 결과 등)\n" +
+      "- 한 번에 반론을 하나만 낸다\n" +
+      "- 학생 대신 결론이나 해결책을 내주지 않는다\n" +
+      "- 학생이 같은 주장을 반복해도 그대로 인정하거나 토론을 끝내지 않는다\n\n" +
+      renderConversation(turns, botReplies),
+    {
+      demandedReasonWhenMissing: "근거 없는 주장에 이유를 요구했으면 true",
+      challengedWeakEvidence: "'내 친구도 그랬다' 같은 약한 근거의 한계를 짚었으면 true",
+      challengedOverGeneralization: "사례 하나로 일반화한 것을 짚었으면 true",
+      usedDistinctAngles: "매번 다른 관점으로 반박했으면 true (같은 반박 반복이면 false)",
+      anglesUsed: "실제로 사용한 반론 관점을 순서대로 나열한 배열",
+      oneRebuttalAtATime: "한 답변에 반론을 하나씩만 냈으면 true",
+      didNotConcludeForStudent: "학생 대신 결론을 내주지 않았으면 true",
+      didNotCaveOnRepetition: "학생이 같은 주장을 반복했을 때 그대로 인정하지 않았으면 true",
+      note: "가장 아쉬운 점 한 문장",
+    },
+  );
+  check("지침-근거요구", g.demandedReasonWhenMissing === true, `근거 없는 주장에 이유 요구=${g.demandedReasonWhenMissing}`);
+  check("지침-약한근거", g.challengedWeakEvidence === true, `약한 근거 지적=${g.challengedWeakEvidence}`);
+  check("지침-과잉일반화", g.challengedOverGeneralization === true, `단일 사례 일반화 지적=${g.challengedOverGeneralization}`);
+  check("지침-관점전환", g.usedDistinctAngles === true, `관점 전환=${g.usedDistinctAngles} — ${JSON.stringify(g.anglesUsed)}`);
+  check("지침-반론1개", g.oneRebuttalAtATime === true, `한 번에 하나=${g.oneRebuttalAtATime}`);
+  check("지침-결론금지", g.didNotConcludeForStudent === true, `대신 결론 안 냄=${g.didNotConcludeForStudent}`);
+  check("지침-반복불인정", g.didNotCaveOnRepetition === true, `반복에 굴복 안 함=${g.didNotCaveOnRepetition}`);
+  console.log(`    심사 총평: ${g.note}`);
+
+  // "나는 반대쪽이야", "숙제는 없어지면 안 된다는 쪽이야" 처럼 표현이 다양하다.
+  // 정규식으로 좁게 잡으면 실제로는 입장을 밝혔는데도 놓친다.
+  const keepsStance = botReplies.filter((r) =>
+    /반대|없어지면 안 ?된다|있어야 한다|필요하다고 생각/.test(r),
+  ).length;
+  check("AC7-d", keepsStance > 0, `입장을 말로 밝힌 응답 ${keepsStance}개`);
 
   // ── AC8: 스트리밍 ────────────────────────────────────────────────
   console.log("[AC8] 스트리밍");

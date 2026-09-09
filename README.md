@@ -81,7 +81,7 @@ npm run dev
 | `npm run build` | 프로덕션 빌드 |
 | `npm run typecheck` | 타입 검사 |
 | `npm run lint` | 린트 |
-| `npm test` | 단위·통합 테스트 (126개) |
+| `npm test` | 단위·통합 테스트 (145개) |
 | `npm run verify:e2e` | 실제 Supabase 에 붙는 E2E 검증 36항목 (개발 서버 필요) |
 | `npm run verify:quality` | 실제 OpenAI 를 불러 챗봇·판정·채점 품질 검증 18항목 |
 | `npm run db:migrate` | 스키마 적용 |

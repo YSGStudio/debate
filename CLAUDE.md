@@ -45,6 +45,11 @@ npm run verify:quality # 실제 OpenAI 를 불러 챗봇·판정·채점 품질 
 학년별 문장 수·문장 길이·어휘 지침·채점 기대 수준을 여기서 바꾸면 두 곳에 함께 반영된다.
 프리셋을 다른 파일에 복사하지 말 것.
 
+**챗봇의 교수법은 `src/lib/prompts/debate-guide.ts` 에 있다.** 어떻게 반박하고
+어떤 질문을 던질지(근거 검토 기준, 반론 관점 목록, 근거 수준별 대응, 금지 표현)는
+전부 이 파일이다. `prompts/debate.ts` 는 여기에 주제·입장·학년만 붙인다.
+토론 방식을 바꾸려면 코드 로직이 아니라 이 파일을 고친다.
+
 **세션은 학급 학년을 스냅샷한다.** `debate_sessions.grade_level` 은 생성 시 학급 값을
 복사하고, `draft` 상태에서만 바뀐다. 학급 학년을 나중에 바꿔도 진행 중인 세션은 흔들리지
 않는다 (R41).
@@ -100,6 +105,9 @@ npm run verify:quality # 실제 OpenAI 를 불러 챗봇·판정·채점 품질 
   `api/debate/result` 의 응답 키는 `topic/stance/messageCount/score` 넷뿐이다.
 - **대시보드는 DB 왕복 1회로 끝난다.** `dashboard_snapshot(uuid)` SQL 함수가 집계를
   담당한다. 학생 수만큼 쿼리를 도는 구조로 바꾸지 말 것.
+- **분량 규칙은 시스템 프롬프트 맨 끝에 둔다.** 교수법 지침이 길어서, 앞쪽에 두면
+  모델이 학년을 잊고 3학년에게 55자 문장을 쓴다. `debate.ts` 의 "# 분량 규칙" 블록을
+  위로 올리지 말 것. `tests/debate-guide.test.ts` 가 위치를 검사한다.
 
 ## 마이그레이션
 

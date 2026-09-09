@@ -92,7 +92,7 @@ describe("토론 프롬프트 입장 고정 (R17)", () => {
   it("되묻는 질문과 근거를 매번 요구한다 (R18)", () => {
     const p = buildDebateSystemPrompt({ topic: "t", description: null, studentStance: "pro", grade: 5 });
     expect(p).toContain("물음표로 끝나야 한다");
-    expect(p).toContain("이유(근거)를 최소 한 가지");
+    expect(p).toContain("근거를 최소 한 가지");
   });
 
   it("출처를 지어내지 말라는 지침이 있다 (R19)", () => {
