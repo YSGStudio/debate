@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import Coach, { type CoachFeedback } from "./coach";
 
 interface Msg { role: "student" | "bot"; content: string }
 
@@ -10,6 +11,7 @@ interface State {
   session: { id: string; topic: string; description: string | null; gradeLevel: number; status: string; messageLimit: number } | null;
   participation: { id: string; stance: "pro" | "con"; messageCount: number } | null;
   messages: Msg[];
+  coach: CoachFeedback | null;
   locked: boolean;
   lockReason: "closed" | "limit" | null;
 }
@@ -29,7 +31,16 @@ export default function DebatePage() {
   const [locked, setLocked] = useState(false);
   const [lockReason, setLockReason] = useState<"closed" | "limit" | null>(null);
   const [count, setCount] = useState(0);
+  const [coach, setCoach] = useState<CoachFeedback | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
+  // 학생이 닫은 안내를 다시 띄우지 않기 위해 기억한다
+  const dismissedRef = useRef<string | null>(null);
+
+  const applyCoach = useCallback((next: CoachFeedback | null) => {
+    if (!next || next.kind === "none") return;
+    if (dismissedRef.current === next.messageId) return;
+    setCoach(next);
+  }, []);
 
   const load = useCallback(async (sid: string | null) => {
     const url = sid ? `/api/debate/state?sessionId=${sid}` : "/api/debate/state";
@@ -44,8 +55,9 @@ export default function DebatePage() {
     }
     setLocked(body.locked);
     setLockReason(body.lockReason);
+    applyCoach(body.coach);
     return body;
-  }, [router]);
+  }, [router, applyCoach]);
 
   // 최초 로드. 타이머 콜백에서 상태를 갱신한다.
   useEffect(() => {
@@ -156,6 +168,16 @@ export default function DebatePage() {
     setMessages((m) => [...m, { role: "bot", content: acc }]);
     setStreaming("");
     setBusy(false);
+
+    // 판정은 응답 뒤에서 돌기 때문에 방금 보낸 말의 안내가 아직 없을 수 있다.
+    // 정기 폴링(5초)보다 촘촘히 몇 번만 확인한다.
+    for (const delay of [800, 1600, 2600, 4000]) {
+      await new Promise((r) => setTimeout(r, delay));
+      const st = await fetch(`/api/debate/state?sessionId=${sessionId}`);
+      if (!st.ok) break;
+      const body = (await st.json()) as State;
+      if (body.coach && body.coach.kind !== "none") { applyCoach(body.coach); break; }
+    }
 
     if (newCount >= limit) { setLocked(true); setLockReason("limit"); }
   }
@@ -289,6 +311,19 @@ export default function DebatePage() {
       </div>
 
       {error && <p className="mx-4 mb-2 rounded-xl bg-red-50 px-4 py-2 text-sm text-red-700">{error}</p>}
+
+      {!locked && (
+        <div className="px-4 pb-2">
+          <Coach
+            feedback={coach}
+            idleHint="내 생각과 그렇게 생각한 이유를 함께 쓰면 점수가 올라가요."
+            onDismiss={() => {
+              if (coach) dismissedRef.current = coach.messageId;
+              setCoach(null);
+            }}
+          />
+        </div>
+      )}
 
       {locked ? (
         <div className="border-t bg-white px-5 py-6 text-center">

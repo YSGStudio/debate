@@ -15,7 +15,7 @@ const state = {
 const calls = {
   streamText: 0, saveFlag: 0, triage: 0, scoring: 0,
   appended: [] as string[],
-  savedFlags: [] as { verdict: string; failed: boolean }[],
+  savedFlags: [] as { verdict: string; failed: boolean; coachKind: string }[],
 };
 
 vi.mock("@/lib/session/student", () => ({
@@ -64,9 +64,13 @@ vi.mock("@/lib/db/participations", () => ({
 }));
 
 vi.mock("@/lib/db/flags", () => ({
-  saveFlag: async (_mid: string, _pid: string, verdict: string, _reason: unknown, failed: boolean) => {
+  saveFlag: async (input: { verdict: string; triageFailed: boolean; coachKind: string }) => {
     calls.saveFlag++;
-    calls.savedFlags.push({ verdict, failed });
+    calls.savedFlags.push({
+      verdict: input.verdict,
+      failed: input.triageFailed,
+      coachKind: input.coachKind,
+    });
   },
 }));
 
@@ -79,8 +83,15 @@ vi.mock("@/lib/ai/triage", () => ({
   // 판정이 실패한 경우의 실제 반환값(on_topic + failed:true)을 그대로 흉내낸다.
   triageMessage: async () => {
     calls.triage++;
-    if (state.triageFails) return { verdict: "on_topic", reason: null, failed: true };
-    return { verdict: state.verdict, reason: state.verdict === "on_topic" ? null : "이유", failed: false };
+    return state.triageFails
+      ? { verdict: "on_topic", reason: null, failed: true, coachKind: "none", coachMessage: null }
+      : {
+          verdict: state.verdict,
+          reason: "이유",
+          failed: false,
+          coachKind: state.verdict === "off_topic" ? "off_topic" : "praise",
+          coachMessage: "안내 문구",
+        };
   },
 }));
 
@@ -214,7 +225,7 @@ describe("메시지 전송 게이트", () => {
     const res = await POST(req("숙제 이야기"));
     await res.text();
     await new Promise((r) => setTimeout(r, 10));
-    expect(calls.savedFlags).toEqual([{ verdict: "on_topic", failed: true }]);
+    expect(calls.savedFlags).toMatchObject([{ verdict: "on_topic", failed: true }]);
   });
 
   it("이탈 판정이 그대로 저장된다 (AC11)", async () => {
@@ -222,7 +233,7 @@ describe("메시지 전송 게이트", () => {
     const res = await POST(req("오늘 급식 뭐야?"));
     await res.text();
     await new Promise((r) => setTimeout(r, 10));
-    expect(calls.savedFlags).toEqual([{ verdict: "off_topic", failed: false }]);
+    expect(calls.savedFlags).toMatchObject([{ verdict: "off_topic", failed: false }]);
   });
 
   it("부적절 판정이 그대로 저장된다 (AC12)", async () => {
@@ -230,7 +241,7 @@ describe("메시지 전송 게이트", () => {
     const res = await POST(req("<욕설 샘플>"));
     await res.text();
     await new Promise((r) => setTimeout(r, 10));
-    expect(calls.savedFlags).toEqual([{ verdict: "inappropriate", failed: false }]);
+    expect(calls.savedFlags).toMatchObject([{ verdict: "inappropriate", failed: false }]);
   });
 
   it("판정은 스트리밍을 기다리지 않고 병렬로 돈다 (R27)", async () => {

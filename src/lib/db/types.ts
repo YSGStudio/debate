@@ -86,6 +86,8 @@ export interface ScoreRow {
   error: string | null;
 }
 
+export type CoachKind = "praise" | "need_reason" | "off_topic" | "none";
+
 export interface FlagRow {
   id: string;
   message_id: string;
@@ -94,6 +96,9 @@ export interface FlagRow {
   reason: string | null;
   triage_failed: boolean;
   acknowledged_at: string | null;
+  /** 학생 화면에 실시간으로 띄우는 길잡이 안내 */
+  coach_kind: CoachKind | null;
+  coach_message: string | null;
   created_at: string;
 }
 

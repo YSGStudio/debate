@@ -108,6 +108,9 @@ create table if not exists moderation_flags (
   reason           text,
   triage_failed    boolean not null default false,
   acknowledged_at  timestamptz,
+  -- 학생에게 실시간으로 보여주는 길잡이 안내 (praise/need_reason/off_topic/none)
+  coach_kind       text check (coach_kind is null or coach_kind in ('praise','need_reason','off_topic','none')),
+  coach_message    text,
   created_at       timestamptz not null default now()
 );
 

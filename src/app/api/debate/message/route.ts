@@ -75,10 +75,23 @@ export async function POST(req: Request) {
   const newCount = participation.student_message_count + 1;
   await bumpStudentMessageCount(participation.id, newCount);
 
-  // 판정은 응답 스트리밍과 병렬로 돈다. await 하지 않는다 (R27).
+  // 판정과 길잡이 안내는 응답 스트리밍과 병렬로 돈다. await 하지 않는다 (R27).
+  // 반론에 제대로 답했는지 보려면 학생이 답한 직전 챗봇 발언이 필요하다.
+  const botPrevious = [...history].reverse().find((m) => m.role === "bot")?.content ?? null;
   runInBackground(
-    triageMessage(session.topic, parsed.data.content).then((t) =>
-      saveFlag(saved.id, participation.id, t.verdict, t.reason, t.failed),
+    triageMessage(
+      { topic: session.topic, grade: session.grade_level, botPrevious },
+      parsed.data.content,
+    ).then((t) =>
+      saveFlag({
+        messageId: saved.id,
+        participationId: participation.id,
+        verdict: t.verdict,
+        reason: t.reason,
+        triageFailed: t.failed,
+        coachKind: t.coachKind,
+        coachMessage: t.coachMessage,
+      }),
     ),
     "message/판정",
   );
