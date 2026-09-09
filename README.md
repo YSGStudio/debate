@@ -83,7 +83,8 @@ npm run dev
 | `npm run lint` | 린트 |
 | `npm test` | 단위·통합 테스트 (173개) |
 | `npm run verify:e2e` | 실제 Supabase 에 붙는 E2E 검증 36항목 (개발 서버 필요) |
-| `npm run verify:quality` | 실제 OpenAI 를 불러 챗봇·판정·채점 품질 검증 18항목 |
+| `npm run verify:quality` | 실제 OpenAI 를 불러 챗봇·판정·채점 품질 검증 |
+| `npm run verify:coach` | 길잡이 안내 3상황 + 판정 일치 검증 |
 | `npm run db:migrate` | 스키마 적용 |
 | `npm run db:seed` | 시드 데이터 |
 

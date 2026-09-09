@@ -25,14 +25,15 @@ npm run db:migrate -- down   # 되돌리기 (데이터가 전부 사라진다)
 npm run db:seed              # 초대 코드 + 데모 교사/학급/학생
 
 npm run verify:e2e     # 실제 Supabase 에 붙는 E2E 36항목 (dev 서버 필요)
-npm run verify:quality # 실제 OpenAI 를 불러 챗봇·판정·채점 품질 18항목
+npm run verify:quality # 실제 OpenAI 를 불러 챗봇·판정·채점 품질
+npm run verify:coach   # 길잡이 안내 3상황 + 판정 일치
 ```
 
 단일 테스트: `npx vitest run tests/scoring-service.test.ts`
 단일 케이스: `npx vitest run -t "상한 직전 메시지는 통과"`
 
 `verify:*` 두 스크립트는 연결된 Supabase 에 실제로 데이터를 쓰고 지운다
-(`e2e-`/`q-` 로 시작하는 계정과 검증용 학급만 만들었다 지움). 운영 DB 에서 돌리지 말 것.
+(`e2e-`/`q-`/`coach-` 로 시작하는 계정과 검증용 학급만 만들었다 지움). 운영 DB 에서 돌리지 말 것.
 
 ## 아키텍처에서 먼저 알아야 할 것
 

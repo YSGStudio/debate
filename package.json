@@ -12,7 +12,8 @@
     "db:migrate": "tsx scripts/migrate.ts",
     "db:seed": "tsx scripts/seed.ts",
     "verify:e2e": "node scripts/e2e-verify.mjs",
-    "verify:quality": "node scripts/verify-quality.mjs"
+    "verify:quality": "node scripts/verify-quality.mjs",
+    "verify:coach": "node scripts/verify-coach.mjs"
   },
   "dependencies": {
     "@ai-sdk/openai": "^4.0.60",
