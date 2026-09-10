@@ -64,8 +64,12 @@ export default function PickNamePage() {
 
   return (
     <main className="student-scope mx-auto max-w-2xl px-5 py-10">
-      <h1 className="text-2xl font-bold">{data.class.name}</h1>
-      <p className="mt-1 mb-6 text-gray-600">내 이름을 눌러주세요.</p>
+      <div className="mb-7 text-center">
+        <div className="mascot-bubble mb-3 text-5xl" aria-hidden="true">🙋</div>
+        <span className="kid-badge">2단계 · 내 이름 찾기</span>
+        <h1 className="mt-3 text-2xl font-bold">{data.class.name}</h1>
+        <p className="mt-1 text-gray-600">아래에서 내 이름을 눌러요.</p>
+      </div>
 
       {data.sessions.length === 0 && (
         <p className="mb-6 rounded-xl bg-amber-50 px-4 py-3 text-amber-800">
@@ -79,7 +83,7 @@ export default function PickNamePage() {
             key={s.id}
             onClick={() => pick(s.id)}
             disabled={busyId !== null}
-            className="rounded-2xl border-2 border-gray-200 bg-white px-4 py-6 text-lg font-bold active:bg-blue-50 disabled:opacity-50"
+            className="rounded-2xl border-2 border-gray-200 bg-white px-4 py-6 text-lg font-bold hover:-translate-y-1 hover:border-blue-400 hover:bg-blue-50 active:bg-blue-50 disabled:opacity-50"
           >
             {s.name}
           </button>

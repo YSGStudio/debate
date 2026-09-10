@@ -222,7 +222,8 @@ export default function DebatePage() {
     return (
       <main className="student-scope mx-auto flex min-h-dvh max-w-md flex-col justify-center gap-6 px-6 py-12">
         <div>
-          <p className="text-sm text-gray-500">오늘의 토론 주제</p>
+          <span className="kid-badge">3단계 · 내 생각 고르기</span>
+          <p className="mt-4 text-sm font-bold text-blue-700">📣 오늘의 토론 주제</p>
           <h1 className="mt-1 text-2xl font-bold">{state.session.topic}</h1>
           {state.session.description && (
             <p className="mt-2 text-gray-600">{state.session.description}</p>
@@ -242,7 +243,7 @@ export default function DebatePage() {
                 : "border-transparent bg-white text-blue-700"
             }`}
           >
-            나는 찬성
+            👍 나는 찬성
           </button>
           <button
             type="button"
@@ -255,7 +256,7 @@ export default function DebatePage() {
                 : "border-transparent bg-white text-orange-600"
             }`}
           >
-            나는 반대
+            🤔 나는 반대
           </button>
         </div>
         <button
@@ -264,7 +265,7 @@ export default function DebatePage() {
           disabled={busy || stance === null}
           className="rounded-2xl bg-gray-900 px-6 py-5 text-xl font-bold text-white disabled:bg-gray-300"
         >
-          {busy ? "준비 중..." : "시작하기"}
+          {busy ? "준비 중..." : "토론 시작! 🚀"}
         </button>
         {stance === null && (
           <p className="text-center text-sm text-gray-500">찬성이나 반대를 먼저 골라줘.</p>
@@ -279,7 +280,7 @@ export default function DebatePage() {
   return (
     <main className="student-scope mx-auto flex h-dvh max-w-2xl flex-col">
       <header className="border-b bg-white px-5 py-3">
-        <p className="text-xs text-gray-500">
+        <p className="text-xs font-bold text-blue-700">
           내 입장: <span className="font-bold">{stanceLabel}</span> · 말한 횟수 {count} / {limit}
         </p>
         <h1 className="text-base font-bold">{state.session.topic}</h1>
@@ -306,7 +307,7 @@ export default function DebatePage() {
             </div>
           </div>
         )}
-        {busy && !streaming && <p className="text-sm text-gray-400">토론 친구가 생각하고 있어요...</p>}
+          {busy && !streaming && <p className="text-sm font-bold text-blue-500">🦉 토론 친구가 생각하고 있어요...</p>}
         <div ref={bottomRef} />
       </div>
 
@@ -354,7 +355,7 @@ export default function DebatePage() {
             disabled={busy || input.trim().length === 0}
             className="rounded-2xl bg-blue-600 px-5 py-3 font-bold text-white disabled:bg-gray-300"
           >
-            보내기
+            보내기 ➜
           </button>
         </form>
       )}

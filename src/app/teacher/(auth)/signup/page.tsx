@@ -35,9 +35,12 @@ export default function SignupPage() {
 
   return (
     <main className="mx-auto flex min-h-dvh max-w-sm flex-col justify-center gap-6 px-6 py-10">
-      <h1 className="text-2xl font-bold">선생님 가입</h1>
-      <p className="-mt-3 text-sm text-gray-500">운영자에게 받은 초대 코드가 있어야 가입할 수 있습니다.</p>
-      <form onSubmit={submit} className="flex flex-col gap-3">
+      <div className="text-center">
+        <div className="mb-2 text-5xl" aria-hidden="true">📝</div>
+        <h1 className="text-2xl font-bold text-blue-700">선생님 가입</h1>
+        <p className="mt-1 text-sm text-gray-500">운영자에게 받은 초대 코드가 있어야 가입할 수 있습니다.</p>
+      </div>
+      <form onSubmit={submit} className="kid-card flex flex-col gap-3 p-6">
         <input value={form.name} onChange={set("name")} required placeholder="이름"
           className="rounded-xl border-2 border-gray-200 px-4 py-3 outline-none focus:border-blue-500" />
         <input type="email" value={form.email} onChange={set("email")} required placeholder="이메일" autoComplete="email"

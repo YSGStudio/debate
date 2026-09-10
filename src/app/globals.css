@@ -1,8 +1,14 @@
 @import "tailwindcss";
 
 :root {
-  --background: #f7f8fa;
-  --foreground: #1a1d21;
+  --background: #fffaf0;
+  --foreground: #25324a;
+  --primary: #536dfe;
+  --primary-dark: #3d50cf;
+  --sunny: #ffd45c;
+  --mint: #9ee6c2;
+  --coral: #ff8f78;
+  --line: #dce4f2;
 }
 
 @theme inline {
@@ -17,12 +23,115 @@ body {
   -webkit-text-size-adjust: 100%;
 }
 
+@font-face {
+  font-family: "Noto Sans KR";
+  src: url("/fonts/NotoSansKR-Regular.ttf") format("truetype");
+  font-weight: 400;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Noto Sans KR";
+  src: url("/fonts/NotoSansKR-Bold.ttf") format("truetype");
+  font-weight: 700;
+  font-display: swap;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: "Noto Sans KR", system-ui, sans-serif;
+  line-height: 1.65;
+  background-image:
+    radial-gradient(circle at 8% 9%, rgb(255 212 92 / 24%) 0 70px, transparent 71px),
+    radial-gradient(circle at 93% 18%, rgb(158 230 194 / 22%) 0 90px, transparent 91px),
+    linear-gradient(#fffaf0, #f5f9ff);
+  background-attachment: fixed;
+}
+
+::selection { background: #ffd45c; color: #25324a; }
+
+h1, h2, h3 { letter-spacing: -0.035em; line-height: 1.35; }
+
+button, a, input, select, textarea { transition: transform 150ms ease, box-shadow 150ms ease, border-color 150ms ease, background-color 150ms ease; }
+button:not(:disabled), a { cursor: pointer; }
+button:not(:disabled):active, a:active { transform: translateY(2px); }
+button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible {
+  outline: 4px solid rgb(255 212 92 / 75%);
+  outline-offset: 3px;
+}
+
+button[class*="bg-blue-600"], a[class*="bg-blue-600"] {
+  background: var(--primary);
+  box-shadow: 0 5px 0 var(--primary-dark);
+}
+button[class*="bg-blue-600"]:hover, a[class*="bg-blue-600"]:hover { background: #6279ff; }
+button:disabled { box-shadow: none !important; transform: none !important; }
+
+[class*="bg-white"] { border-color: var(--line); }
+[class*="shadow-sm"] { box-shadow: 0 5px 0 rgb(91 112 151 / 10%), 0 10px 30px rgb(91 112 151 / 8%); }
+
+input, select, textarea { font: inherit; }
+input::placeholder, textarea::placeholder { color: #8995a9; }
+
+/* 학생 화면: 읽기 쉬운 크기, 둥근 카드, 즐거운 교실 색을 공통 적용한다. */
+.student-scope {
+  position: relative;
+  z-index: 0;
+  font-size: 18px;
+  line-height: 1.75;
+}
+.student-scope h1 { font-size: clamp(1.65rem, 5vw, 2.2rem); }
+.student-scope button { min-height: 52px; }
+.student-scope [class*="bg-white"] {
+  border: 2px solid var(--line);
+  box-shadow: 0 5px 0 rgb(91 112 151 / 12%);
+}
+.student-scope [class*="bg-blue-600"] { border-color: #3d50cf; }
+.student-scope [class*="bg-orange-500"] { box-shadow: 0 5px 0 #d85f47; }
+
+.kid-card {
+  border: 3px solid #e4e9f4;
+  border-radius: 28px;
+  background: rgb(255 255 255 / 92%);
+  box-shadow: 0 9px 0 rgb(91 112 151 / 12%), 0 20px 50px rgb(91 112 151 / 10%);
+}
+.kid-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: .4rem;
+  border-radius: 999px;
+  background: #fff0b5;
+  color: #68521c;
+  padding: .35rem .8rem;
+  font-size: .85rem;
+  font-weight: 700;
+}
+.mascot-bubble {
+  filter: drop-shadow(0 8px 0 rgb(61 80 207 / 12%));
+  animation: floaty 3s ease-in-out infinite;
+}
+
+/* 교사용 화면도 학생용 서비스와 같은 밝은 시각 언어를 유지한다. */
+header[class*="border-b"] { border-color: var(--line); box-shadow: 0 3px 0 rgb(91 112 151 / 8%); }
+section[class*="rounded-2xl"], li[class*="rounded-2xl"], div[class*="rounded-2xl"][class*="border"] {
+  border-color: var(--line);
+  box-shadow: 0 4px 0 rgb(91 112 151 / 9%);
+}
+
+@keyframes floaty { 50% { transform: translateY(-7px) rotate(1deg); } }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; }
+}
+
 /* 학생 화면은 교실 태블릿이 1차 대상이다. 터치 타겟과 글자를 크게 잡는다. */
 .student-scope {
-  font-size: 17px;
+  font-size: 18px;
 }
 @media (max-width: 640px) {
   .student-scope {
-    font-size: 16px;
+    font-size: 17px;
   }
 }

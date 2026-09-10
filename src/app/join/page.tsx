@@ -30,11 +30,15 @@ export default function JoinPage() {
   }
 
   return (
-    <main className="student-scope mx-auto flex min-h-dvh max-w-md flex-col justify-center gap-6 px-6 py-12">
-      <h1 className="text-2xl font-bold">우리 반 코드를 넣어주세요</h1>
-      <p className="text-gray-600">칠판에 적힌 숫자 6개를 그대로 쓰면 돼요.</p>
+    <main className="student-scope mx-auto flex min-h-dvh max-w-md flex-col justify-center gap-6 px-5 py-12 text-center">
+      <div className="mascot-bubble text-6xl" aria-hidden="true">🔑</div>
+      <div>
+        <span className="kid-badge">1단계 · 우리 반 찾기</span>
+        <h1 className="mt-4 text-2xl font-bold">우리 반 코드를 입력해요</h1>
+        <p className="mt-2 text-gray-600">칠판에 적힌 숫자 6개를 그대로 쓰면 돼요.</p>
+      </div>
 
-      <form onSubmit={submit} className="flex flex-col gap-4">
+      <form onSubmit={submit} className="kid-card flex flex-col gap-4 p-5 sm:p-7">
         <input
           value={code}
           // 숫자만 받는다. 아이가 다른 키를 눌러도 화면에 남지 않게 한다.

@@ -51,7 +51,7 @@ export default function TeacherHome() {
   return (
     <div className="flex flex-col gap-8">
       <section>
-        <h1 className="mb-4 text-xl font-bold">우리 반</h1>
+        <h1 className="mb-4 text-xl font-bold">🏫 우리 반</h1>
         {classes.length === 0 ? (
           <p className="text-gray-500">아직 학급이 없습니다. 아래에서 만들어 주세요.</p>
         ) : (
@@ -71,7 +71,7 @@ export default function TeacherHome() {
       </section>
 
       <section className="rounded-2xl border bg-white p-5">
-        <h2 className="mb-3 font-bold">학급 만들기</h2>
+        <h2 className="mb-3 font-bold">➕ 새 학급 만들기</h2>
         <form onSubmit={create} className="flex flex-wrap items-center gap-3">
           <input value={name} onChange={(e) => setName(e.target.value)} required placeholder="예: 4학년 2반"
             className="flex-1 rounded-xl border-2 border-gray-200 px-4 py-2 outline-none focus:border-blue-500" />

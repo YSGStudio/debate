@@ -116,7 +116,8 @@ async function main() {
   console.log("[AC3] 학급과 명단");
   res = await a.fetch("/api/classes", { method: "POST", body: JSON.stringify({ name: "검증 4학년 2반", gradeLevel: 4 }) });
   const cls = (await res.json()).class;
-  check("AC3-a", /^[A-Z0-9]{6}$/.test(cls.join_code) && !/[01OIL]/.test(cls.join_code), `학급 코드 ${cls.join_code}`);
+  // 학급 코드는 숫자 6자리다. 0 과 1 도 쓴다 (알파벳이 없어 혼동할 글자가 없다).
+  check("AC3-a", /^[0-9]{6}$/.test(cls.join_code), `학급 코드 ${cls.join_code}`);
   check("AC19", cls.grade_level === 4, `학년 기본값 ${cls.grade_level}`);
 
   const names = Array.from({ length: 25 }, (_, i) => `검증학생${String(i + 1).padStart(2, "0")}`);

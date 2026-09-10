@@ -50,7 +50,7 @@ export default function ArchivePage() {
   return (
     <div className="flex flex-col gap-8">
       <div>
-        <h1 className="text-xl font-bold">보관함</h1>
+        <h1 className="text-xl font-bold">📦 보관함</h1>
         <p className="mt-1 text-sm text-gray-600">
           보관한 학급과 토론입니다. 되돌리면 다시 목록에 나타납니다.
           보관된 학급의 코드로는 학생이 들어올 수 없습니다.
