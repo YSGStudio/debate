@@ -1,4 +1,5 @@
 import { getPreset } from "@/lib/grade-presets";
+import { AREA_KEYS, MAX_OFF_TOPIC_PENALTY, type AreaKey } from "@/lib/score-display";
 import { SCORING_GUIDE } from "./scoring-guide";
 import { STANCE_LABEL, type Stance } from "./debate";
 
@@ -8,42 +9,19 @@ export interface ScoringPromptInput {
   grade: number;
 }
 
-/** 5개 평가 영역과 배점. DB 제약(0004 마이그레이션)과 같은 값을 유지해야 한다. */
-export const AREAS = [
-  { key: "claim", label: "주장 표현", max: 15 },
-  { key: "evidence", label: "근거의 적절성과 구체성", max: 25 },
-  { key: "counter", label: "반론 이해와 대응", max: 25 },
-  { key: "development", label: "생각의 발전과 조정", max: 25 },
-  { key: "participation", label: "토론 참여와 답변 충실성", max: 10 },
-] as const;
-
-export type AreaKey = (typeof AREAS)[number]["key"];
-
-export const AREA_KEYS = AREAS.map((a) => a.key) as readonly AreaKey[];
-export const AREA_LABEL = Object.fromEntries(AREAS.map((a) => [a.key, a.label])) as Record<AreaKey, string>;
-export const AREA_MAX = Object.fromEntries(AREAS.map((a) => [a.key, a.max])) as Record<AreaKey, number>;
-
-export const BASE_TOTAL_MAX = AREAS.reduce((sum, a) => sum + a.max, 0); // 100
-export const MAX_OFF_TOPIC_PENALTY = -15;
-
-/** 토론 참여 분석 항목의 허용값 */
-export const ANALYSIS_OPTIONS = {
-  evidence: ["충분함", "보통", "부족함", "거의 없음"],
-  counter: ["적극적", "보통", "부족함", "거의 없음"],
-  shortAnswers: ["거의 없음", "일부 있음", "자주 있음", "대부분 단답"],
-  focus: ["매우 좋음", "좋음", "일부 이탈", "반복적 이탈", "심각한 이탈"],
-} as const;
-
-/** 생각의 변화 선택지 */
-export const CHANGE_OPTIONS = [
-  "의견을 유지하면서 근거가 강화됨",
-  "의견을 유지하면서 조건이 구체화됨",
-  "의견의 일부를 수정함",
-  "의견이 크게 바뀜",
-  "새로운 관점을 고려했지만 큰 변화는 없음",
-  "큰 변화 없이 기존 주장과 근거를 반복함",
-  "근거가 부족하여 생각의 변화를 판단하기 어려움",
-] as const;
+// 배점·라벨·선택지의 단일 출처는 `lib/score-display.ts` 다.
+// 화면 코드가 이 파일(프롬프트 본문 수천 자)을 임포트하지 않도록 분리해 두었다.
+export {
+  AREAS,
+  AREA_KEYS,
+  AREA_LABEL,
+  AREA_MAX,
+  BASE_TOTAL_MAX,
+  MAX_OFF_TOPIC_PENALTY,
+  ANALYSIS_OPTIONS,
+  CHANGE_OPTIONS,
+  type AreaKey,
+} from "@/lib/score-display";
 
 /**
  * 토론 채점 프롬프트.

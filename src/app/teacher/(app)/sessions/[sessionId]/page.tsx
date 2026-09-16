@@ -4,14 +4,8 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 
-/** scoring.ts 의 AREAS 와 같은 순서·배점 */
-const AREAS = [
-  { key: "claim", label: "주장 표현", max: 15 },
-  { key: "evidence", label: "근거의 적절성과 구체성", max: 25 },
-  { key: "counter", label: "반론 이해와 대응", max: 25 },
-  { key: "development", label: "생각의 발전과 조정", max: 25 },
-  { key: "participation", label: "토론 참여와 답변 충실성", max: 10 },
-] as const;
+import { BASE_TOTAL_MAX } from "@/lib/score-display";
+import ScoreReport, { type ScoreDetail } from "../../score-report";
 
 interface StudentTile {
   student_id: string; display_name: string; participation_id: string | null;
@@ -44,15 +38,7 @@ interface Detail {
     id: string; role: "student" | "bot"; content: string;
     verdict: string | null; reason: string | null; triageFailed: boolean;
   }[];
-  score: {
-    status: string; total: number | null; baseTotal: number | null;
-    offTopicPenalty: number | null; scores: Record<string, number | null>;
-    reasons: Record<string, string> | null; strengths: string[] | null;
-    nextStep: string | null;
-    analysis: { evidence: string; counter: string; shortAnswers: string; focus: string } | null;
-    changeSummary: string | null; changeReason: string | null;
-    error: string | null;
-  } | null;
+  score: ScoreDetail | null;
 }
 
 function timeAgo(iso: string | null): string {
@@ -228,7 +214,7 @@ export default function DashboardPage() {
               <div className="mt-1 flex items-center justify-between">
                 <p className="text-sm">
                   {st.score_status === "done" ? (
-                    <span className="font-bold text-blue-700">{st.score_total} / 100점</span>
+                    <span className="font-bold text-blue-700">{st.score_total} / {BASE_TOTAL_MAX}점</span>
                   ) : st.score_status === "pending" ? (
                     <span className="text-gray-500">채점 중</span>
                   ) : st.score_status === "skipped" ? (
@@ -293,60 +279,19 @@ export default function DashboardPage() {
           ) : (
             <>
               {detail.score && (
-                <div className="mb-4 rounded-xl bg-gray-50 p-4">
+                <div className="mb-4">
                   {detail.score.status === "done" ? (
-                    <>
-                      <p className="mb-1 font-bold">최종 점수 {detail.score.total} / 100점</p>
-                      <p className="mb-2 text-xs text-gray-600">
-                        기본 {detail.score.baseTotal ?? "-"}점 · 주제 이탈 감점{" "}
-                        {detail.score.offTopicPenalty ?? 0}점
-                      </p>
-                      {AREAS.map((a) => (
-                        <p key={a.key} className="text-sm">
-                          <span className="inline-block w-44 text-gray-600">{a.label}</span>
-                          <span className="font-bold">
-                            {detail.score?.scores?.[a.key] ?? "-"} / {a.max}
-                          </span>
-                          <span className="ml-2 text-gray-600">{detail.score?.reasons?.[a.key] ?? ""}</span>
-                        </p>
-                      ))}
-                      {(detail.score.offTopicPenalty ?? 0) < 0 && detail.score.reasons?.offTopic && (
-                        <p className="text-sm">
-                          <span className="inline-block w-44 text-gray-600">주제 이탈</span>
-                          <span className="font-bold">{detail.score.offTopicPenalty}</span>
-                          <span className="ml-2 text-gray-600">{detail.score.reasons.offTopic}</span>
-                        </p>
-                      )}
-                      {detail.score.strengths && (
-                        <p className="mt-2 text-sm">잘한 점: {detail.score.strengths.join(" / ")}</p>
-                      )}
-                      {detail.score.nextStep && (
-                        <p className="text-sm">더 발전시키면 좋은 점: {detail.score.nextStep}</p>
-                      )}
-                      {detail.score.analysis && (
-                        <p className="mt-2 text-xs text-gray-600">
-                          근거 제시 {detail.score.analysis.evidence} · 반론 대응{" "}
-                          {detail.score.analysis.counter} · 단답식 {detail.score.analysis.shortAnswers} ·
-                          주제 집중 {detail.score.analysis.focus}
-                        </p>
-                      )}
-                      {detail.score.changeSummary && (
-                        <p className="text-xs text-gray-600">
-                          생각의 변화: {detail.score.changeSummary}
-                          {detail.score.changeReason ? ` — ${detail.score.changeReason}` : ""}
-                        </p>
-                      )}
-                    </>
+                    <ScoreReport score={detail.score} />
                   ) : detail.score.status === "failed" ? (
-                    <div className="flex items-center justify-between">
-                      <p className="text-sm text-red-700">채점에 실패했습니다.</p>
+                    <div className="flex items-center justify-between gap-2 rounded-xl border border-rose-200 bg-rose-50 p-3">
+                      <p className="text-sm text-rose-800">채점에 실패했습니다.</p>
                       <button onClick={() => retryScore(openPid)}
-                        className="rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-bold text-white">다시 채점</button>
+                        className="shrink-0 rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-bold text-white">다시 채점</button>
                     </div>
                   ) : detail.score.status === "skipped" ? (
-                    <p className="text-sm text-gray-600">대화가 짧아 채점하지 않았습니다.</p>
+                    <p className="rounded-xl bg-gray-50 p-3 text-sm text-gray-600">대화가 짧아 채점하지 않았습니다.</p>
                   ) : (
-                    <p className="text-sm text-gray-600">채점 중입니다.</p>
+                    <p className="rounded-xl bg-gray-50 p-3 text-sm text-gray-600">채점 중입니다.</p>
                   )}
                 </div>
               )}

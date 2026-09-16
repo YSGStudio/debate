@@ -2,15 +2,7 @@
 
 import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-
-/** scoring.ts 의 AREAS 와 같은 순서·배점을 쓴다. */
-const AREAS = [
-  { key: "claim", label: "주장 표현", max: 15 },
-  { key: "evidence", label: "근거의 적절성과 구체성", max: 25 },
-  { key: "counter", label: "반론 이해와 대응", max: 25 },
-  { key: "development", label: "생각의 발전과 조정", max: 25 },
-  { key: "participation", label: "토론 참여와 답변 충실성", max: 10 },
-] as const;
+import { AREAS, BASE_TOTAL_MAX, BAND_BAR, band } from "@/lib/score-display";
 
 interface ResultData {
   topic: string;
@@ -30,13 +22,10 @@ interface ResultData {
 
 /** 영역 점수를 막대로 보여준다. 숫자만 보는 것보다 어디가 부족한지 한눈에 들어온다. */
 function Bar({ value, max }: { value: number; max: number }) {
-  const pct = Math.round((value / max) * 100);
+  const pct = max > 0 ? Math.round((value / max) * 100) : 0;
   return (
     <div className="mt-1 h-2 w-full overflow-hidden rounded-full bg-gray-200">
-      <div
-        className={`h-full rounded-full ${pct >= 80 ? "bg-green-500" : pct >= 50 ? "bg-blue-500" : "bg-amber-500"}`}
-        style={{ width: `${pct}%` }}
-      />
+      <div className={`h-full rounded-full ${BAND_BAR[band(value, max)]}`} style={{ width: `${pct}%` }} />
     </div>
   );
 }
@@ -107,7 +96,7 @@ function ResultInner() {
             <p className="text-sm font-bold opacity-90">⭐ 내 토론 점수</p>
             <p className="text-4xl font-bold">
               {score.total}
-              <span className="text-xl font-normal"> / 100점</span>
+              <span className="text-xl font-normal"> / {BASE_TOTAL_MAX}점</span>
             </p>
             {penalty < 0 && (
               <p className="mt-2 text-sm opacity-90">
