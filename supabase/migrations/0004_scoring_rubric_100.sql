@@ -19,13 +19,23 @@
 
 begin;
 
--- 옛 점수를 재채점 대상으로 돌린다 (컬럼을 지우기 전에 먼저 한다)
-update debate_scores
-   set status = 'failed',
-       error  = '채점 기준이 100점 만점으로 바뀌었습니다. 다시 채점해 주세요.',
-       total  = null,
-       updated_at = now()
- where status = 'done';
+-- 옛 점수를 재채점 대상으로 돌린다 (컬럼을 지우기 전에 먼저 한다).
+-- 옛 20점 컬럼(score_listening)이 남아 있을 때만 한다. 조건 없이 두면 이 파일을 다시 돌릴 때
+-- (npm run db:migrate 는 모든 up 파일을 다시 돌린다) 새 100점 채점 결과까지 전부 failed 로 지워진다.
+do $$
+begin
+  if exists (
+    select 1 from information_schema.columns
+     where table_name = 'debate_scores' and column_name = 'score_listening'
+  ) then
+    update debate_scores
+       set status = 'failed',
+           error  = '채점 기준이 100점 만점으로 바뀌었습니다. 다시 채점해 주세요.',
+           total  = null,
+           updated_at = now()
+     where status = 'done';
+  end if;
+end $$;
 
 -- 옛 컬럼 정리
 alter table debate_scores drop column if exists score_listening;
