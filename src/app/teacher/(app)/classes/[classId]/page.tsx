@@ -3,8 +3,8 @@
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
-import { GRADE_LEVELS } from "@/lib/grade-presets";
 import ArchiveButton from "../../archive-button";
+import TeamDebatesSection, { type TeamDebateItem } from "./team-debates";
 
 interface ClassRow {
   id: string; name: string; grade_level: number; join_code: string; single_active_session: boolean;
@@ -20,8 +20,7 @@ const STATUS_LABEL = { draft: "준비 중", open: "진행 중", closed: "끝남"
 export default function ClassPage() {
   const { classId } = useParams<{ classId: string }>();
   const router = useRouter();
-  const [data, setData] = useState<{ class: ClassRow; students: StudentRow[]; sessions: SessionRow[] } | null>(null);
-  const [roster, setRoster] = useState("");
+  const [data, setData] = useState<{ class: ClassRow; students: StudentRow[]; sessions: SessionRow[]; teamDebates?: TeamDebateItem[] } | null>(null);
   const [topic, setTopic] = useState("");
   const [description, setDescription] = useState("");
   const [limit, setLimit] = useState(30);
@@ -58,84 +57,48 @@ export default function ClassPage() {
   const activeStudents = data.students.filter((s) => s.is_active);
 
   return (
-    <div className="flex flex-col gap-8">
-      <section className="rounded-2xl border bg-white p-5">
+    <div className="flex flex-col gap-6">
+      <section className="rounded-3xl border bg-white p-5 shadow-sm sm:p-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h1 className="text-xl font-bold">{data.class.name}</h1>
+            <p className="text-xs font-bold text-blue-700">토론 관리</p>
+            <h1 className="mt-1 text-2xl font-bold">{data.class.name}</h1>
             <p className="text-sm text-gray-500">초등 {data.class.grade_level}학년 · 학생 {activeStudents.length}명</p>
           </div>
           <div className="text-right">
-            <p className="text-xs text-gray-500">학급 코드</p>
+            <p className="text-xs text-gray-500">토론 코드</p>
             <p className="font-mono text-3xl tracking-widest">{data.class.join_code}</p>
-            <button onClick={() => call(`/api/classes/${classId}/rotate-code`)}
-              className="mt-1 text-xs text-gray-500 underline">코드 다시 만들기</button>
+            <Link href="/teacher/settings"
+              className="mt-1 inline-block text-sm font-bold text-blue-700 underline">학생 명단 환경설정</Link>
           </div>
         </div>
-
-        <div className="mt-4 flex flex-wrap items-center gap-4 border-t pt-4 text-sm">
-          <label className="flex items-center gap-2">
-            학년
-            <select value={data.class.grade_level}
-              onChange={(e) => call(`/api/classes/${classId}`, { gradeLevel: Number(e.target.value) }, "PATCH")}
-              className="rounded-lg border-2 border-gray-200 px-2 py-1">
-              {GRADE_LEVELS.map((g) => <option key={g} value={g}>{g}학년</option>)}
-            </select>
-          </label>
-          <label className="flex items-center gap-2">
-            <input type="checkbox" checked={data.class.single_active_session}
-              onChange={(e) => call(`/api/classes/${classId}`, { singleActiveSession: e.target.checked }, "PATCH")} />
-            한 번에 하나의 토론만 열기
-          </label>
-        </div>
-        <p className="mt-2 text-xs text-gray-500">
-          학년을 바꿔도 이미 만든 토론에는 영향을 주지 않습니다. 새로 만드는 토론부터 적용됩니다.
+        <p className="mt-4 border-t pt-4 text-sm text-gray-600">
+          환경설정에 등록한 학생 {activeStudents.length}명의 명단을 토론에서 불러옵니다.
         </p>
+      </section>
 
-        <div className="mt-4 flex items-center gap-3 border-t pt-4">
-          <ArchiveButton url={`/api/classes/${classId}`} onDone={() => router.push("/teacher")} />
-          <span className="text-xs text-gray-500">
-            보관하면 학생이 코드로 들어올 수 없습니다. 보관함에서 되돌리거나 완전히 지울 수 있습니다.
-          </span>
+      <section className="overflow-hidden rounded-3xl border border-blue-200 bg-white shadow-sm">
+        <div className="flex flex-wrap items-center gap-4 border-b border-blue-100 bg-blue-50 px-5 py-5 sm:px-6">
+          <span aria-hidden="true" className="flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-600 text-2xl text-white">💬</span>
+          <div className="flex-1">
+            <h2 className="text-xl font-bold text-blue-950">개인 토론</h2>
+            <p className="text-sm text-blue-800">학생이 AI 토론 친구와 일대일로 생각을 나눕니다.</p>
+          </div>
+          <span className="rounded-full bg-white px-3 py-1 text-sm font-bold text-blue-800">{data.sessions.length}개</span>
         </div>
-      </section>
-
-      <section className="rounded-2xl border bg-white p-5">
-        <h2 className="mb-3 font-bold">학생 명단</h2>
-        {activeStudents.length > 0 && (
-          <ul className="mb-4 flex flex-wrap gap-2">
-            {activeStudents.map((s) => (
-              <li key={s.id} className="flex items-center gap-1 rounded-full bg-gray-100 px-3 py-1 text-sm">
-                {s.display_name}
-                <button onClick={() => call(`/api/students/${s.id}`, undefined, "DELETE")}
-                  className="text-gray-400 hover:text-red-600" aria-label={`${s.display_name} 삭제`}>×</button>
-              </li>
-            ))}
-          </ul>
-        )}
-        <textarea value={roster} onChange={(e) => setRoster(e.target.value)} rows={4}
-          placeholder={"이름을 줄바꿈으로 구분해 붙여넣으세요\n김하늘\n이바다"}
-          className="w-full rounded-xl border-2 border-gray-200 px-4 py-3 outline-none focus:border-blue-500" />
-        <button
-          onClick={async () => {
-            const r = await call(`/api/classes/${classId}/students`, { mode: "bulk", raw: roster });
-            if (r) { setRoster(""); setNotice(`${(r as { added: number }).added}명 등록했습니다.`); }
-          }}
-          className="mt-2 rounded-xl bg-blue-600 px-5 py-2 font-bold text-white">명단 등록</button>
-      </section>
-
-      <section className="rounded-2xl border bg-white p-5">
-        <h2 className="mb-3 font-bold">토론</h2>
+        <div className="p-5 sm:p-6">
+        <h3 className="mb-3 text-sm font-bold text-gray-700">만든 개인 토론</h3>
         <ul className="mb-5 flex flex-col gap-2">
           {data.sessions.map((s) => (
-            <li key={s.id} className="flex flex-wrap items-center justify-between gap-2 rounded-xl border p-3">
-              <div>
+            <li key={s.id} className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-gray-200 bg-white p-4">
+              <div className="min-w-0 flex-1">
                 <p className="font-bold">{s.topic}</p>
                 <p className="text-xs text-gray-500">
-                  {STATUS_LABEL[s.status]} · 초등 {s.grade_level}학년 · 1인 {s.message_limit}회까지
+                  <span className={`mr-2 inline-block rounded-full px-2 py-0.5 font-bold ${s.status === "open" ? "bg-green-100 text-green-800" : s.status === "draft" ? "bg-amber-100 text-amber-800" : "bg-gray-100 text-gray-700"}`}>{STATUS_LABEL[s.status]}</span>
+                  초등 {s.grade_level}학년 · 1인 {s.message_limit}회까지
                 </p>
               </div>
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
                 {s.status === "draft" && (
                   <button onClick={() => call(`/api/sessions/${s.id}`, { action: "open" }, "PATCH")}
                     className="rounded-lg bg-green-600 px-3 py-1.5 text-sm font-bold text-white">토론 시작</button>
@@ -152,14 +115,15 @@ export default function ClassPage() {
               </div>
             </li>
           ))}
-          {data.sessions.length === 0 && <li className="text-sm text-gray-500">아직 만든 토론이 없습니다.</li>}
+          {data.sessions.length === 0 && <li className="rounded-2xl border border-dashed border-blue-200 bg-blue-50/50 p-5 text-center text-sm text-gray-600">아직 만든 개인 토론이 없습니다.</li>}
         </ul>
 
-        <div className="border-t pt-4">
-          <h3 className="mb-2 text-sm font-bold">새 토론 만들기</h3>
+        <div className="rounded-2xl border border-blue-100 bg-blue-50/60 p-4 sm:p-5">
+          <h3 className="mb-1 font-bold text-blue-950">새 개인 토론 만들기</h3>
+          <p className="mb-4 text-sm text-blue-800">주제와 발언 횟수를 정해 학생별 대화를 시작할 수 있습니다.</p>
           <div className="flex flex-col gap-2">
             <input value={topic} onChange={(e) => setTopic(e.target.value)} maxLength={100}
-              placeholder="토론 주제 (예: 숙제는 없어져야 한다)"
+              placeholder="개인 토론 주제 (예: 숙제는 없어져야 한다)"
               className="rounded-xl border-2 border-gray-200 px-4 py-2 outline-none focus:border-blue-500" />
             <input value={description} onChange={(e) => setDescription(e.target.value)} maxLength={300}
               placeholder="보충 설명 (선택)"
@@ -176,15 +140,24 @@ export default function ClassPage() {
               }}
               disabled={topic.trim().length === 0}
               className="self-start rounded-xl bg-blue-600 px-5 py-2 font-bold text-white disabled:bg-gray-300">
-              만들기
+              개인 토론 만들기
             </button>
           </div>
         </div>
+        </div>
       </section>
+
+      <TeamDebatesSection
+        classId={classId}
+        gradeLevel={data.class.grade_level}
+        items={data.teamDebates ?? []}
+        onChange={load}
+        onError={setError}
+      />
 
       {error && <p className="rounded-xl bg-red-50 px-4 py-3 text-red-700">{error}</p>}
       {notice && <p className="rounded-xl bg-green-50 px-4 py-3 text-green-800">{notice}</p>}
-      <Link href="/teacher" className="text-sm text-gray-500 underline">← 학급 목록</Link>
+      <Link href="/teacher" className="text-sm text-gray-500 underline">← 토론 목록</Link>
     </div>
   );
 }

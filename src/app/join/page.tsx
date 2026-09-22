@@ -33,8 +33,8 @@ export default function JoinPage() {
     <main className="student-scope mx-auto flex min-h-dvh max-w-md flex-col justify-center gap-6 px-5 py-12 text-center">
       <div className="mascot-bubble text-6xl" aria-hidden="true">🔑</div>
       <div>
-        <span className="kid-badge">1단계 · 우리 반 찾기</span>
-        <h1 className="mt-4 text-2xl font-bold">우리 반 코드를 입력해요</h1>
+        <span className="kid-badge">1단계 · 토론 찾기</span>
+        <h1 className="mt-4 text-2xl font-bold">토론 코드를 입력해요</h1>
         <p className="mt-2 text-gray-600">칠판에 적힌 숫자 6개를 그대로 쓰면 돼요.</p>
       </div>
 

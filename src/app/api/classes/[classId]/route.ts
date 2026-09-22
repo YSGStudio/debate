@@ -10,6 +10,7 @@ import {
 } from "@/lib/db/classes";
 import { listStudents } from "@/lib/db/students";
 import { listSessions } from "@/lib/db/sessions";
+import { listTeamDebates } from "@/lib/db/team-debates";
 import { isErr, jsonError, notFound, readJson, requireTeacher } from "@/lib/api";
 import { GRADE_LEVELS } from "@/lib/grade-presets";
 
@@ -37,6 +38,7 @@ export async function GET(_req: Request, ctx: { params: Promise<{ classId: strin
     class: cls,
     students: await listStudents(classId),
     sessions: await listSessions(classId),
+    teamDebates: await listTeamDebates(classId),
   });
 }
 
@@ -75,7 +77,7 @@ export async function DELETE(req: Request, ctx: { params: Promise<{ classId: str
   }
 
   const ok = await deleteClass(auth.teacherId, classId);
-  if (!ok) return jsonError("학급을 지우지 못했습니다.", 500);
+  if (!ok) return jsonError("토론을 지우지 못했습니다.", 500);
   return NextResponse.json({ deleted: true, impact });
 }
 

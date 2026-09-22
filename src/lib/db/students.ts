@@ -1,6 +1,7 @@
 import "server-only";
 import { admin } from "@/lib/supabase/admin";
 import { UNIQUE_VIOLATION, type StudentRow } from "./types";
+import { studentHasTeamRecords } from "./team-debates";
 
 const COLS = "id, class_id, display_name, is_active";
 
@@ -92,6 +93,10 @@ export async function removeOrDeactivateStudent(
       .in("participation_id", participationIds);
     hasMessages = (count ?? 0) > 0;
   }
+
+  // 팀 토론에서 발언·팀 채팅을 남긴 학생도 지우지 않는다 (ver2 V-R5).
+  // 지우면 team_members 가 cascade 로 사라지고 발언의 작성자가 끊긴다.
+  if (!hasMessages) hasMessages = await studentHasTeamRecords(studentId);
 
   if (hasMessages) {
     await admin().from("students").update({ is_active: false }).eq("id", studentId);

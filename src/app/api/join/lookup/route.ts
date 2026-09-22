@@ -3,6 +3,7 @@ import { z } from "zod";
 import { findClassByJoinCode } from "@/lib/db/classes";
 import { listStudents } from "@/lib/db/students";
 import { listOpenSessions } from "@/lib/db/sessions";
+import { listOpenTeamDebateTopics } from "@/lib/db/team-debates";
 import { isValidClassCode, normalizeClassCode } from "@/lib/class-code";
 import { jsonError, readJson } from "@/lib/api";
 
@@ -17,11 +18,17 @@ export async function POST(req: Request) {
   const cls = await findClassByJoinCode(code);
   if (!cls) return jsonError("코드를 다시 확인해 주세요.", 404);
 
-  const [students, sessions] = await Promise.all([listStudents(cls.id, true), listOpenSessions(cls.id)]);
+  const [students, sessions, openTeam] = await Promise.all([
+    listStudents(cls.id, true),
+    listOpenSessions(cls.id),
+    listOpenTeamDebateTopics(cls.id),
+  ]);
 
   return NextResponse.json({
     class: { id: cls.id, name: cls.name, gradeLevel: cls.grade_level, joinCode: cls.join_code },
     students: students.map((s) => ({ id: s.id, name: s.display_name })),
     sessions: sessions.map((s) => ({ id: s.id, topic: s.topic, description: s.description })),
+    // 팀 토론은 배정된 학생에게만 보이므로 여기서는 열린 것이 있는지만 알린다 (ver2 V-R6)
+    openTeamDebateCount: openTeam.length,
   });
 }

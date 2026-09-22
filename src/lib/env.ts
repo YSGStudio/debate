@@ -14,6 +14,8 @@ export const env = {
   get debateModel() { return process.env.OPENAI_DEBATE_MODEL || "gpt-4.1"; },
   get triageModel() { return process.env.OPENAI_TRIAGE_MODEL || "gpt-4.1-mini"; },
   get scoringModel() { return process.env.OPENAI_SCORING_MODEL || "gpt-4.1"; },
+  /** 팀 토론 발언별 채점 (발언마다 1회라 소형 모델) */
+  get judgeModel() { return process.env.OPENAI_JUDGE_MODEL || "gpt-4.1-mini"; },
   get studentSessionSecret() { return req("STUDENT_SESSION_SECRET"); },
   get teacherSessionSecret() { return req("TEACHER_SESSION_SECRET"); },
 };

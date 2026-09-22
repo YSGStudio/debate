@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getStudentSession } from "@/lib/session/student";
 import { getStudentInClass } from "@/lib/db/students";
 import { getOwnedClassless } from "@/lib/db/session-helpers";
+import { listOpenTeamDebatesForStudent } from "@/lib/db/team-debates";
 import { jsonError } from "@/lib/api";
 
 /**
@@ -18,6 +19,10 @@ export async function GET(req: Request) {
   const student = await getStudentInClass(s.classId, s.studentId);
   if (!student) return jsonError("다시 입장해 주세요.", 401);
 
-  const state = await getOwnedClassless(s.classId, s.studentId, sessionId);
-  return NextResponse.json(state);
+  const [state, teamDebates] = await Promise.all([
+    getOwnedClassless(s.classId, s.studentId, sessionId),
+    // 자기가 배정된 열린 팀 토론만 (ver2 V-R6)
+    listOpenTeamDebatesForStudent(s.classId, s.studentId),
+  ]);
+  return NextResponse.json({ ...state, teamDebates });
 }

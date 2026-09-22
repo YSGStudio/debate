@@ -36,8 +36,8 @@ function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
   ]);
 }
 
-/** 부적절 여부 (OpenAI Moderation API, 무료) */
-async function checkModeration(text: string): Promise<{ flagged: boolean; reason: string | null }> {
+/** 부적절 여부 (OpenAI Moderation API, 무료). 팀 토론 발언·채팅 판정도 이 함수를 쓴다. */
+export async function checkModeration(text: string): Promise<{ flagged: boolean; reason: string | null }> {
   const client = new OpenAI({ apiKey: env.openaiApiKey });
   const res = await client.moderations.create({
     model: "omni-moderation-latest",

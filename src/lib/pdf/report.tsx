@@ -5,7 +5,7 @@ import { Document, Font, Page, StyleSheet, Text, View, renderToBuffer } from "@r
 import { AREAS, BASE_TOTAL_MAX } from "@/lib/prompts/scoring";
 
 let registered = false;
-function registerFonts() {
+export function registerFonts() {
   if (registered) return;
   const dir = path.join(process.cwd(), "public", "fonts");
   Font.register({
@@ -144,7 +144,7 @@ function Report({ data }: { data: ReportData }) {
         <Text style={s.coverTitle}>토론 수업 기록</Text>
         <Text style={s.coverTopic}>{data.topic}</Text>
         {data.description ? <Text style={s.meta}>{data.description}</Text> : null}
-        <Text style={s.meta}>학급: {data.className}</Text>
+        <Text style={s.meta}>토론: {data.className}</Text>
         <Text style={s.meta}>학년: 초등 {data.gradeLevel}학년</Text>
         <Text style={s.meta}>만든 날짜: {data.generatedAt}</Text>
         {data.status !== "closed" ? (

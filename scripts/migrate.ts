@@ -23,12 +23,18 @@ if (!url) {
   process.exit(1);
 }
 
+/**
+ * up 은 번호 오름차순, down 은 **내림차순**으로 돌린다.
+ * down 을 오름차순으로 돌리면 0001_down 이 먼저 테이블을 지워서
+ * 뒤 번호의 되돌리기 파일이 가리킬 대상이 사라진다.
+ */
 function listMigrations(down: boolean): string[] {
   const dir = path.join("supabase", "migrations");
-  return fs
+  const files = fs
     .readdirSync(dir)
     .filter((f) => f.endsWith(".sql") && f.includes("_down.") === down)
     .sort();
+  return down ? files.reverse() : files;
 }
 
 const down = process.argv.includes("down");

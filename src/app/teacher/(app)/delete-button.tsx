@@ -11,6 +11,12 @@ interface Impact {
   openTopics?: string[];
   messageCount: number;
   scoredCount: number;
+  /** 팀 토론 (ver2) */
+  teamDebateCount?: number;
+  teamMessageCount?: number;
+  memberCount?: number;
+  speechCount?: number;
+  chatCount?: number;
 }
 
 interface Props {
@@ -74,7 +80,7 @@ export default function DeleteButton({ url, label, onDeleted, className = "" }: 
     );
   }
 
-  const hasData = impact.messageCount > 0;
+  const hasData = impact.messageCount > 0 || (impact.teamMessageCount ?? 0) > 0;
   const openBlocked = (impact.openTopics?.length ?? 0) > 0;
 
   return (
@@ -85,7 +91,18 @@ export default function DeleteButton({ url, label, onDeleted, className = "" }: 
         {impact.studentCount !== undefined && <li>· 학생 {impact.studentCount}명</li>}
         {impact.sessionCount !== undefined && <li>· 토론 {impact.sessionCount}개</li>}
         {impact.joinedStudents !== undefined && <li>· 참여한 학생 {impact.joinedStudents}명</li>}
-        <li>· 대화 {impact.messageCount}건</li>
+        {impact.memberCount !== undefined && <li>· 배정된 학생 {impact.memberCount}명</li>}
+        {impact.speechCount !== undefined ? (
+          <>
+            <li>· 토론방 발언 {impact.speechCount}건</li>
+            <li>· 팀 채팅 {impact.chatCount ?? 0}건</li>
+          </>
+        ) : (
+          <li>· 대화 {impact.messageCount}건</li>
+        )}
+        {(impact.teamDebateCount ?? 0) > 0 && (
+          <li>· 팀 토론 {impact.teamDebateCount}개 (발언·채팅 {impact.teamMessageCount ?? 0}건)</li>
+        )}
         {impact.scoredCount > 0 && <li>· 채점 결과 {impact.scoredCount}건</li>}
       </ul>
 

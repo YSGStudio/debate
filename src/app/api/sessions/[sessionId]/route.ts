@@ -112,7 +112,7 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ sessionId: st
     const opened = await openSessionAtomic(sessionId);
     if (opened.result === "conflict") {
       return jsonError(
-        `이미 열려 있는 토론이 있습니다: "${opened.conflictTopic}". 먼저 종료하거나 학급 설정에서 "한 번에 하나만 열기"를 꺼주세요.`,
+        `이미 열려 있는 토론이 있습니다: "${opened.conflictTopic}". 먼저 종료하거나 토론 설정에서 "한 번에 하나만 열기"를 꺼주세요.`,
         409,
         { openTopic: opened.conflictTopic },
       );

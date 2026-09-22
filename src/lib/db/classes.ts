@@ -2,6 +2,8 @@ import "server-only";
 import { admin } from "@/lib/supabase/admin";
 import { generateClassCode } from "@/lib/class-code";
 import { UNIQUE_VIOLATION, type ClassRow } from "./types";
+import { bulkAddStudents } from "./students";
+import { classTeamImpact, listOpenTeamDebateTopics } from "./team-debates";
 
 const CLASS_COLS = "id, teacher_id, name, grade_level, join_code, single_active_session, created_at, archived_at";
 
@@ -11,16 +13,27 @@ export async function createClass(
   name: string,
   gradeLevel: number,
 ): Promise<ClassRow> {
+  const { data: roster, error: rosterError } = await admin().from("teacher_roster")
+    .select("display_name").eq("teacher_id", teacherId);
+  if (rosterError) throw new Error(`공통 학생 명단 조회 실패: ${rosterError.message}`);
+  const names = ((roster ?? []) as { display_name: string }[]).map((row) => row.display_name);
   for (let i = 0; i < 8; i++) {
     const { data, error } = await admin()
       .from("classes")
       .insert({ teacher_id: teacherId, name, grade_level: gradeLevel, join_code: generateClassCode() })
       .select(CLASS_COLS)
       .single();
-    if (!error) return data as ClassRow;
-    if (error.code !== UNIQUE_VIOLATION) throw new Error(`학급 생성 실패: ${error.message}`);
+    if (!error) {
+      const cls = data as ClassRow;
+      if (names.length) {
+        const copied = await bulkAddStudents(cls.id, names);
+        if (!copied.ok) throw new Error("학생 명단을 토론에 복사하지 못했습니다.");
+      }
+      return cls;
+    }
+    if (error.code !== UNIQUE_VIOLATION) throw new Error(`토론 생성 실패: ${error.message}`);
   }
-  throw new Error("학급 코드를 만들지 못했습니다. 다시 시도해 주세요.");
+  throw new Error("토론 코드를 만들지 못했습니다. 다시 시도해 주세요.");
 }
 
 export async function listClasses(teacherId: string): Promise<ClassRow[]> {
@@ -75,7 +88,7 @@ export async function rotateJoinCode(teacherId: string, classId: string): Promis
     if (!error) return (data as ClassRow) ?? null;
     if (error.code !== UNIQUE_VIOLATION) throw new Error(`코드 재발급 실패: ${error.message}`);
   }
-  throw new Error("학급 코드를 만들지 못했습니다. 다시 시도해 주세요.");
+  throw new Error("토론 코드를 만들지 못했습니다. 다시 시도해 주세요.");
 }
 
 export interface ClassImpact {
@@ -85,6 +98,10 @@ export interface ClassImpact {
   openTopics: string[];
   messageCount: number;
   scoredCount: number;
+  /** 팀 토론 수 (ver2) */
+  teamDebateCount: number;
+  /** 팀 토론 발언·팀 채팅 수 */
+  teamMessageCount: number;
 }
 
 /**
@@ -92,13 +109,16 @@ export interface ClassImpact {
  * 학급 → 학생 → 참여 → 메시지 순으로 전부 cascade 된다.
  */
 export async function classDeletionImpact(classId: string, className: string): Promise<ClassImpact> {
-  const [{ count: studentCount }, { data: sessions }] = await Promise.all([
+  const [{ count: studentCount }, { data: sessions }, openTeamTopics, team] = await Promise.all([
     admin().from("students").select("id", { count: "exact", head: true }).eq("class_id", classId),
     admin().from("debate_sessions").select("id, topic, status").eq("class_id", classId),
+    listOpenTeamDebateTopics(classId),
+    classTeamImpact(classId),
   ]);
 
   const rows = (sessions ?? []) as { id: string; topic: string; status: string }[];
-  const openTopics = rows.filter((s) => s.status === "open").map((s) => s.topic);
+  // 열린 팀 토론이 있어도 학급을 보관·삭제하지 않는다 (ver2 V-R5)
+  const openTopics = [...rows.filter((s) => s.status === "open").map((s) => s.topic), ...openTeamTopics];
 
   if (rows.length === 0) {
     return {
@@ -108,6 +128,7 @@ export async function classDeletionImpact(classId: string, className: string): P
       openTopics,
       messageCount: 0,
       scoredCount: 0,
+      ...team,
     };
   }
 
@@ -139,6 +160,7 @@ export async function classDeletionImpact(classId: string, className: string): P
     openTopics,
     messageCount,
     scoredCount,
+    ...team,
   };
 }
 

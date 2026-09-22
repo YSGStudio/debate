@@ -6,6 +6,9 @@
 - **챗봇**: 학생이 고른 입장의 **반대편**을 대화 내내 고수. 학년(3~6)에 맞춰 어휘와 문장 길이를 조절
 - **교사**: 대시보드 3초 자동 갱신, 주제 이탈(노랑)·부적절 발언(빨강) 즉시 식별, 세션 전체 PDF 내려받기
 - **채점**: 토론이 끝나면 4항목 20점 만점으로 자동 채점. 점수와 피드백을 학생과 교사가 모두 확인
+- **팀 토론 (ver2)**: 학생들이 찬성팀·반대팀으로 나뉘어 전체 토론방에서 차례를 번갈아 발언하고,
+  AI 가 심판으로 발언마다 채점한다. 교사는 관제실에서 단계·시간·공지·숨김을 통제한다.
+  요구사항은 [.dev/ver2/prd.md](.dev/ver2/prd.md)
 
 요구사항 원본은 [.dev/debate-classroom/prd.md](.dev/debate-classroom/prd.md) 를 본다.
 
@@ -37,7 +40,8 @@ npm install
 | `OPENAI_API_KEY` | OpenAI API 키 |
 | `OPENAI_DEBATE_MODEL` | 토론 응답 모델 (기본 `gpt-4.1`) |
 | `OPENAI_TRIAGE_MODEL` | 주제 이탈 판정 모델 (기본 `gpt-4.1-mini`) |
-| `OPENAI_SCORING_MODEL` | 채점 모델 (기본 `gpt-4.1`) |
+| `OPENAI_SCORING_MODEL` | 채점 모델 (기본 `gpt-4.1`). 팀 토론 종합 피드백도 이 모델 |
+| `OPENAI_JUDGE_MODEL` | 팀 토론 발언별 채점 모델 (기본 `gpt-4.1-mini`) |
 | `STUDENT_SESSION_SECRET` | 학생 세션 쿠키 서명 키 |
 | `TEACHER_SESSION_SECRET` | 교사 세션 쿠키 서명 키 |
 
@@ -85,6 +89,7 @@ npm run dev
 | `npm run verify:e2e` | 실제 Supabase 에 붙는 E2E 검증 36항목 (개발 서버 필요) |
 | `npm run verify:quality` | 실제 OpenAI 를 불러 챗봇·판정·채점 품질 검증 |
 | `npm run verify:coach` | 길잡이 안내 3상황 + 판정 일치 검증 |
+| `npm run verify:team` | 팀 토론 E2E (실제 Supabase + OpenAI, 개발 서버 필요, 약 1분) |
 | `npm run db:migrate` | 스키마 적용 |
 | `npm run db:seed` | 시드 데이터 |
 
@@ -106,7 +111,15 @@ npm run verify:quality
 확인한다. 대화 전문이 `quality-transcript.txt` 에 남으므로 말투를 직접 읽어볼 수 있다.
 OpenAI 호출이 30~40회 일어난다.
 
-두 스크립트 모두 `e2e-`/`q-` 로 시작하는 검증용 계정과 학급만 만들었다가 끝나면 지운다.
+```bash
+npm run verify:team
+```
+
+팀 토론을 처음부터 끝까지 실제 API 로 돌린다. 배정·입장·차례·패스·잠금·일시정지·공지·숨김·
+채점·점수 수정·결과·PDF·보관·삭제까지 확인한다. 차례 시간 초과 하나는 실제로 30초를 기다리고,
+나머지는 service role 로 마감 시각을 앞당겨 흉내 낸다. 발언 채점·결과·부적절 판정에 OpenAI 를 부른다.
+
+세 스크립트 모두 `e2e-`/`q-`/`team-` 로 시작하는 검증용 계정과 학급만 만들었다가 끝나면 지운다.
 **운영 데이터가 들어 있는 프로젝트에서는 돌리지 말 것.**
 
 ## 보관함

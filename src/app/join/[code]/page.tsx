@@ -7,6 +7,7 @@ interface LookupData {
   class: { id: string; name: string; gradeLevel: number };
   students: { id: string; name: string }[];
   sessions: { id: string; topic: string; description: string | null }[];
+  openTeamDebateCount?: number;
 }
 
 export default function PickNamePage() {
@@ -71,7 +72,7 @@ export default function PickNamePage() {
         <p className="mt-1 text-gray-600">아래에서 내 이름을 눌러요.</p>
       </div>
 
-      {data.sessions.length === 0 && (
+      {data.sessions.length === 0 && !data.openTeamDebateCount && (
         <p className="mb-6 rounded-xl bg-amber-50 px-4 py-3 text-amber-800">
           아직 토론이 시작되지 않았어요. 선생님이 시작할 때까지 기다려요.
         </p>

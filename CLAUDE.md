@@ -27,13 +27,14 @@ npm run db:seed              # 초대 코드 + 데모 교사/학급/학생
 npm run verify:e2e     # 실제 Supabase 에 붙는 E2E 36항목 (dev 서버 필요)
 npm run verify:quality # 실제 OpenAI 를 불러 챗봇·판정·채점 품질
 npm run verify:coach   # 길잡이 안내 3상황 + 판정 일치
+npm run verify:team    # 팀 토론 E2E (실제 Supabase + OpenAI, dev 서버 필요)
 ```
 
 단일 테스트: `npx vitest run tests/scoring-service.test.ts`
 단일 케이스: `npx vitest run -t "상한 직전 메시지는 통과"`
 
 `verify:*` 두 스크립트는 연결된 Supabase 에 실제로 데이터를 쓰고 지운다
-(`e2e-`/`q-`/`coach-` 로 시작하는 계정과 검증용 학급만 만들었다 지움). 운영 DB 에서 돌리지 말 것.
+(`e2e-`/`q-`/`coach-`/`team-` 로 시작하는 계정과 검증용 학급만 만들었다 지움). 운영 DB 에서 돌리지 말 것.
 
 ## 아키텍처에서 먼저 알아야 할 것
 
@@ -84,6 +85,12 @@ DB 제약(0004 마이그레이션)도 함께 고쳐야 한다.
 상한을 깎지 않고, 판정 대상이 되지 않고, 채점 대화 전문에 학생 발언으로 섞이지 않는다.
 찬반 선택 직후 챗봇 발언을 학생 메시지로 보내는 방식으로 되돌리지 말 것.
 
+**팀 토론 모드 (ver2)** 는 1:1 과 별개의 테이블(`team_*`, 0006 마이그레이션)과 화면이다.
+요구사항은 `.dev/ver2/prd.md`(V-R1~V-R50). 차례·잠금·시간 판정은 전부 SQL 함수
+(`team_tick`, `team_claim`, `team_speak`, `team_control`, `team_poll`)가 한다.
+`src/lib/team/rules.ts` 에 같은 규칙이 순수 함수로 있다(합산·표시·테스트용). 한쪽을 바꾸면 다른 쪽도 바꾸고
+`verify:team` 을 돌린다. 발언 채점 기준표는 `prompts/team-judge-guide.ts`, 합산은 `speechTotal`.
+
 ## 고치기 쉬운데 되돌리면 안 되는 것들
 
 이미 한 번씩 버그였다가 고친 지점들이다.
@@ -99,7 +106,7 @@ DB 제약(0004 마이그레이션)도 함께 고쳐야 한다.
 - **응답 후에도 끝나야 하는 작업은 `runInBackground`** (`src/lib/background.ts`) 로 넘긴다.
   `void promise` 로 두면 서버리스에서 판정·채점이 조용히 유실된다.
 - **학생 삭제는 그 학생의 모든 참여를 본다** (`removeOrDeactivateStudent`).
-  참여 하나만 보고 판단하면 다른 세션 기록이 cascade 로 함께 지워진다.
+  참여 하나만 보고 판단하면 다른 세션 기록이 cascade 로 함께 지워진다. 팀 토론 발언·채팅도 본다.
 - **삭제는 보관 → 완전 삭제 두 단계다.** `PATCH {action:"archive"}` 로 `archived_at` 을
   채우고, 완전 삭제(`DELETE`)는 `archived_at` 이 채워진 것만 지운다. DB 쿼리에도
   `.not("archived_at","is",null)` 가 걸려 있어 라우트를 우회해도 목록에서 바로
@@ -110,7 +117,7 @@ DB 제약(0004 마이그레이션)도 함께 고쳐야 한다.
 - **진행 중(`open`)인 토론은 보관도 삭제도 하지 않는다.** 보관하면 학급 코드가 죽어서
   대화하던 학생이 그대로 튕긴다. 세션 삭제는 `.neq("status","open")` 으로 DB 레벨에서도 막는다.
 - **보관된 것은 학생에게 보이지 않는다.** `findClassByJoinCode` 와 `listOpenSessions`,
-  `listSessions` 가 `archived_at is null` 로 거른다. 새 조회를 추가할 때 이 필터를 빠뜨리지 말 것.
+  `listSessions`, `listOpenTeamDebatesForStudent`, `team_resolve_member` 가 `archived_at is null` 로 거른다. 새 조회를 추가할 때 이 필터를 빠뜨리지 말 것.
 - **채점 프롬프트에 `moderation_flags` 를 넘기지 않는다.** 주제 이탈 감점은 평가자가
   대화 자체를 읽고 판단한다. 판정기는 학생을 의심하지 않는 쪽으로 넉넉하게 보고,
   평가는 이탈 횟수와 토론에 미친 영향을 따지므로 기준이 다르다. 판정 결과를 넘기면
@@ -126,6 +133,16 @@ DB 제약(0004 마이그레이션)도 함께 고쳐야 한다.
   `api/debate/result` 의 응답 키는 `topic/stance/messageCount/score` 넷뿐이다.
 - **대시보드는 DB 왕복 1회로 끝난다.** `dashboard_snapshot(uuid)` SQL 함수가 집계를
   담당한다. 학생 수만큼 쿼리를 도는 구조로 바꾸지 말 것.
+- **팀 토론 시간 판정은 `team_debates` 행 잠금 안에서 한다** (`team_tick`). 백그라운드 타이머가 없다.
+  모든 폴링·쓰기가 먼저 tick 을 부르므로, 잠금을 빼면 학생 30명이 동시에 폴링할 때 패스가 여러 번 기록된다.
+  밀린 차례는 `now()` 가 아니라 **마감 시각부터** 이어 붙인다.
+- **학생 팀 토론 폴링에 상대 팀 채팅을 넣지 않는다.** `team_poll` 이 SQL 에서 거른다. 클라이언트에서 숨기지 말 것.
+  `after_end` 공개 방식이면 점수 필드도 SQL 에서 뺀다.
+- **팀 토론 AI 입력은 전부 가명**("찬성팀 학생1", `team_members.alias`)이다. 실명을 프롬프트에 넣지 않는다.
+  반 전체에 보이는 피드백은 `stripAliases` 로 가명까지 팀 이름으로 바꾼다.
+- **팀 토론 점수·총점·우승은 서버가 계산한다** (`speechTotal`, `computeTeamTotals`, `decideWinner`).
+  교사가 고친 점수(`edited_at`)는 재채점이 덮지 않는다. `judgeSpeech` 는 `triageMessage` 처럼 예외를 삼킨다.
+- **팀 토론 폴링은 RPC 1회다** (`team_poll`). 소유권·기기 확인까지 SQL 안에서 한다.
 - **분량 규칙은 시스템 프롬프트 맨 끝에 둔다.** 교수법 지침이 길어서, 앞쪽에 두면
   모델이 학년을 잊고 3학년에게 55자 문장을 쓴다. `debate.ts` 의 "# 분량 규칙" 블록을
   위로 올리지 말 것. `tests/debate-guide.test.ts` 가 위치를 검사한다.
@@ -136,6 +153,9 @@ DB 제약(0004 마이그레이션)도 함께 고쳐야 한다.
 `create or replace function`). 이미 배포된 DB 가 있으므로 `0001_init.sql` 을 고칠 때는
 증분 파일(`0002_...`)도 함께 만들어 기존 DB 가 따라올 수 있게 한다.
 `psql` 이 없으면 SQL Editor 에 번호순으로 붙여넣어도 된다.
+`down` 은 되돌리기 파일을 **번호 역순**으로 돌린다. 새 `_down` 파일은 전부 `if exists` 로 쓴다.
+SQL 함수를 고쳤으면 로컬 Postgres(`initdb` 임시 클러스터)에 0001~ 을 올려 먼저 돌려 볼 수 있다
+(0001 은 `auth.users` 가 없으면 그 FK 를 건너뛴다).
 
 ## 테스트 관례
 

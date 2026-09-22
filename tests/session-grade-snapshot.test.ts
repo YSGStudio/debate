@@ -15,6 +15,9 @@ const tables: Record<string, Row[]> = {
   students: [],
   participations: [],
   messages: [],
+  // 팀 토론 (ver2). 학생 삭제 판단이 이 두 테이블도 본다.
+  team_members: [],
+  team_messages: [],
 };
 
 /** supabase-js 체인의 최소 구현 */
@@ -244,6 +247,20 @@ describe("학생 삭제와 비활성 (R7)", () => {
     expect(await removeOrDeactivateStudent("c1", "s1")).toBe("deactivated");
     expect(tables.students[0].is_active).toBe(false);
     expect(tables.messages).toHaveLength(1);
+  });
+
+  it("팀 토론에서만 발언한 학생도 지우지 않고 비활성 처리한다 (ver2 V-R5, V-AC4)", async () => {
+    tables.team_members.push({ id: "tm1", student_id: "s1", debate_id: "d1" });
+    tables.team_messages.push({ id: "tmsg1", member_id: "tm1", debate_id: "d1", kind: "speech" });
+
+    expect(await removeOrDeactivateStudent("c1", "s1")).toBe("deactivated");
+    expect(tables.students[0].is_active).toBe(false);
+    expect(tables.team_messages).toHaveLength(1);
+  });
+
+  it("팀에 배정만 되고 말하지 않은 학생은 삭제된다", async () => {
+    tables.team_members.push({ id: "tm1", student_id: "s1", debate_id: "d1" });
+    expect(await removeOrDeactivateStudent("c1", "s1")).toBe("deleted");
   });
 
   it("다른 학급의 학생은 건드리지 않는다", async () => {

@@ -14,6 +14,8 @@ interface State {
   coach: CoachFeedback | null;
   locked: boolean;
   lockReason: "closed" | "limit" | null;
+  /** 내가 배정된 열린 팀 토론 (ver2 V-R6) */
+  teamDebates?: { id: string; topic: string; side: "pro" | "con" }[];
 }
 
 const MAX_LEN = 500;
@@ -32,6 +34,8 @@ export default function DebatePage() {
   const [lockReason, setLockReason] = useState<"closed" | "limit" | null>(null);
   const [count, setCount] = useState(0);
   const [coach, setCoach] = useState<CoachFeedback | null>(null);
+  // 팀 토론이 함께 열려 있을 때 1:1 토론을 고른 경우
+  const [picked1on1, setPicked1on1] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   // 학생이 닫은 안내를 다시 띄우지 않기 위해 기억한다
   const dismissedRef = useRef<string | null>(null);
@@ -183,6 +187,39 @@ export default function DebatePage() {
   }
 
   if (!state) return <main className="student-scope p-8 text-gray-500">불러오는 중...</main>;
+
+  // 배정된 팀 토론이 있으면 먼저 고르게 한다 (ver2 V-R6)
+  const teamDebates = state.teamDebates ?? [];
+  if (teamDebates.length > 0 && !state.participation && !picked1on1) {
+    return (
+      <main className="student-scope mx-auto max-w-md px-6 py-12">
+        <h1 className="mb-4 text-xl font-bold">어떤 토론에 들어갈까요?</h1>
+        <div className="flex flex-col gap-3">
+          {teamDebates.map((t) => (
+            <button
+              key={t.id}
+              onClick={() => router.push(`/team/${t.id}`)}
+              className="rounded-2xl border-2 border-green-300 bg-white px-5 py-5 text-left text-lg font-bold"
+            >
+              👥 팀 토론 · {t.topic}
+              <span className="mt-1 block text-sm font-normal text-gray-600">
+                우리 팀: {t.side === "pro" ? "찬성" : "반대"}
+              </span>
+            </button>
+          ))}
+          {state.openSessions.map((s) => (
+            <button
+              key={s.id}
+              onClick={() => { setPicked1on1(true); setSessionId(s.id); void load(s.id); }}
+              className="rounded-2xl border-2 border-gray-200 bg-white px-5 py-5 text-left text-lg font-bold"
+            >
+              🦉 토론 친구와 1:1 · {s.topic}
+            </button>
+          ))}
+        </div>
+      </main>
+    );
+  }
 
   // 열린 토론이 없을 때
   if (!state.session) {

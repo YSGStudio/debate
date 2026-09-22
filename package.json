@@ -13,7 +13,8 @@
     "db:seed": "tsx scripts/seed.ts",
     "verify:e2e": "node scripts/e2e-verify.mjs",
     "verify:quality": "node scripts/verify-quality.mjs",
-    "verify:coach": "node scripts/verify-coach.mjs"
+    "verify:coach": "node scripts/verify-coach.mjs",
+    "verify:team": "node scripts/verify-team.mjs"
   },
   "dependencies": {
     "@ai-sdk/openai": "^4.0.60",

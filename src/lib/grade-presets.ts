@@ -22,6 +22,8 @@ export interface GradePreset {
   exampleDomains: string;
   /** 이 학년에서 5점을 받을 만한 답변은 어떤 모습인가 (R48) */
   scoringExpectation: string;
+  /** 팀 토론 발언 하나가 만점(5점)을 받으려면 어떤 모습인가 (ver2 V-R31) */
+  teamJudgeExpectation: string;
 }
 
 export const GRADE_PRESETS: Record<GradeLevel, GradePreset> = {
@@ -34,6 +36,8 @@ export const GRADE_PRESETS: Record<GradeLevel, GradePreset> = {
     exampleDomains: "학교, 집, 놀이, 친구처럼 3학년이 매일 겪는 일",
     scoringExpectation:
       "3학년은 '왜냐하면 ~니까' 한 마디만 붙여도 근거를 댄 것으로 본다. 자기 경험을 이유로 드는 것도 훌륭한 근거다. 문장이 짧고 맞춤법이 틀려도 뜻이 통하면 표현 점수를 깎지 않는다.",
+    teamJudgeExpectation:
+      "3학년은 한 문장에 이유 하나만 붙여도 논리성 2점이다. 자기 경험을 들면 근거 1점이다. 상대 팀 말을 한 마디라도 따라 말하고 답하면 상대 발언 반영 1점이다.",
   },
   4: {
     grade: 4,
@@ -44,6 +48,8 @@ export const GRADE_PRESETS: Record<GradeLevel, GradePreset> = {
     exampleDomains: "학교 생활, 가족, 동네, 좋아하는 것",
     scoringExpectation:
       "4학년은 주장에 이유를 붙이고, 상대가 물은 것에 대답하면 잘한 것이다. 이유가 두 개 이상이거나 예를 함께 들면 5점이다.",
+    teamJudgeExpectation:
+      "4학년은 주장에 이유를 붙이고 예를 하나 들면 논리성 2점, 근거 1점이다. 상대 팀이 한 말의 핵심을 짚고 답하면 상대 발언 반영 1점이다.",
   },
   5: {
     grade: 5,
@@ -54,6 +60,8 @@ export const GRADE_PRESETS: Record<GradeLevel, GradePreset> = {
     exampleDomains: "학교, 지역 사회, 뉴스에서 본 일, 책에서 읽은 이야기",
     scoringExpectation:
       "5학년은 근거를 이유와 예시로 나눠 말할 수 있어야 5점이다. 상대 말의 어느 부분에 반대하는지 짚어서 답하면 '상대 말에 답하기'가 5점이다.",
+    teamJudgeExpectation:
+      "5학년은 이유와 예시를 나눠 말해야 논리성 2점이다. 상대 팀 발언의 어느 부분에 반대하는지 분명히 해야 상대 발언 반영 1점이다.",
   },
   6: {
     grade: 6,
@@ -64,6 +72,8 @@ export const GRADE_PRESETS: Record<GradeLevel, GradePreset> = {
     exampleDomains: "학교, 사회 문제, 뉴스, 역사, 과학에서 배운 내용",
     scoringExpectation:
       "6학년은 자기 주장의 약점을 인정하거나 조건을 붙여 말할 수 있어야 5점이다. 상대 근거를 인용해 되받아치면 '상대 말에 답하기'가 5점이다.",
+    teamJudgeExpectation:
+      "6학년은 조건이나 반례를 들어 주장을 다듬어야 논리성 2점이다. 상대 팀 근거를 인용해 되받아쳐야 상대 발언 반영 1점이다.",
   },
 };
 
