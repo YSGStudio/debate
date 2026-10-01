@@ -1,9 +1,10 @@
 import "server-only";
 import { admin } from "@/lib/supabase/admin";
+import type { EvidenceItem } from "@/lib/evidence";
 import type { SessionRow } from "./types";
 
 const COLS =
-  "id, class_id, topic, description, grade_level, status, message_limit, opened_at, closed_at, archived_at, created_at";
+  "id, class_id, topic, description, pro_claim, con_claim, evidence, grade_level, status, message_limit, opened_at, closed_at, archived_at, created_at";
 
 export async function createSession(
   classId: string,
@@ -11,6 +12,8 @@ export async function createSession(
   topic: string,
   description: string | null,
   messageLimit: number,
+  claims: { proClaim: string | null; conClaim: string | null } = { proClaim: null, conClaim: null },
+  evidence: EvidenceItem[] = [],
 ): Promise<SessionRow> {
   const { data, error } = await admin()
     .from("debate_sessions")
@@ -18,6 +21,9 @@ export async function createSession(
       class_id: classId,
       topic,
       description,
+      pro_claim: claims.proClaim,
+      con_claim: claims.conClaim,
+      evidence,
       grade_level: gradeLevel, // 생성 시 학급 학년을 스냅샷 (R41)
       message_limit: messageLimit,
       status: "draft",
@@ -117,13 +123,33 @@ export async function listOpenSessions(classId: string): Promise<SessionRow[]> {
 
 export async function updateDraftSession(
   sessionId: string,
-  patch: Partial<Pick<SessionRow, "topic" | "description" | "grade_level" | "message_limit">>,
+  patch: Partial<
+    Pick<SessionRow, "topic" | "description" | "pro_claim" | "con_claim" | "grade_level" | "message_limit">
+  >,
 ): Promise<SessionRow | null> {
   const { data } = await admin()
     .from("debate_sessions")
     .update(patch)
     .eq("id", sessionId)
     .eq("status", "draft") // draft 에서만 수정 가능 (R41)
+    .select(COLS)
+    .maybeSingle();
+  return (data as SessionRow) ?? null;
+}
+
+/**
+ * 근거 자료 목록을 통째로 바꾼다. 준비 중·진행 중에만 된다.
+ * 진행 중에 바꾸면 다음 챗봇 응답부터 새 목록을 쓴다. 끝난 토론은 바꿔도 의미가 없어 막는다.
+ */
+export async function updateSessionEvidence(
+  sessionId: string,
+  evidence: EvidenceItem[],
+): Promise<SessionRow | null> {
+  const { data } = await admin()
+    .from("debate_sessions")
+    .update({ evidence })
+    .eq("id", sessionId)
+    .neq("status", "closed")
     .select(COLS)
     .maybeSingle();
   return (data as SessionRow) ?? null;

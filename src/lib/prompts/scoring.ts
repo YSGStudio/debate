@@ -1,9 +1,9 @@
 import { getPreset } from "@/lib/grade-presets";
 import { AREA_KEYS, MAX_OFF_TOPIC_PENALTY, type AreaKey } from "@/lib/score-display";
 import { SCORING_GUIDE } from "./scoring-guide";
-import { STANCE_LABEL, type Stance } from "./debate";
+import { stanceWithClaim, type Stance, type StanceClaims } from "./debate";
 
-export interface ScoringPromptInput {
+export interface ScoringPromptInput extends StanceClaims {
   topic: string;
   studentStance: Stance;
   grade: number;
@@ -44,7 +44,7 @@ export function buildScoringSystemPrompt(input: ScoringPromptInput): string {
     "# 이번 토론",
     "",
     `주제: ${input.topic}`,
-    `학생의 입장: ${STANCE_LABEL[input.studentStance]}`,
+    `학생의 입장: ${stanceWithClaim(input.studentStance, input)}`,
     `학생의 학년: 초등학교 ${p.grade}학년`,
     "",
     "## 이 학년에서 기대할 수 있는 수준",

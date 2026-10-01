@@ -8,7 +8,11 @@ interface Msg { role: "student" | "bot"; content: string }
 
 interface State {
   openSessions: { id: string; topic: string; description: string | null }[];
-  session: { id: string; topic: string; description: string | null; gradeLevel: number; status: string; messageLimit: number } | null;
+  session: {
+    id: string; topic: string; description: string | null;
+    proClaim: string | null; conClaim: string | null;
+    gradeLevel: number; status: string; messageLimit: number;
+  } | null;
   participation: { id: string; stance: "pro" | "con"; messageCount: number } | null;
   messages: Msg[];
   coach: CoachFeedback | null;
@@ -281,6 +285,9 @@ export default function DebatePage() {
             }`}
           >
             👍 나는 찬성
+            {state.session.proClaim && (
+              <span className="mt-2 block text-sm font-normal">{state.session.proClaim}</span>
+            )}
           </button>
           <button
             type="button"
@@ -294,6 +301,9 @@ export default function DebatePage() {
             }`}
           >
             🤔 나는 반대
+            {state.session.conClaim && (
+              <span className="mt-2 block text-sm font-normal">{state.session.conClaim}</span>
+            )}
           </button>
         </div>
         <button
@@ -313,12 +323,14 @@ export default function DebatePage() {
 
   const limit = state.session.messageLimit;
   const stanceLabel = state.participation.stance === "pro" ? "찬성" : "반대";
+  const myClaim = state.participation.stance === "pro" ? state.session.proClaim : state.session.conClaim;
 
   return (
     <main className="student-scope mx-auto flex h-dvh max-w-2xl flex-col">
       <header className="border-b bg-white px-5 py-3">
         <p className="text-xs font-bold text-blue-700">
-          내 입장: <span className="font-bold">{stanceLabel}</span> · 말한 횟수 {count} / {limit}
+          내 입장: <span className="font-bold">{stanceLabel}</span>
+          {myClaim && <span className="font-normal"> ({myClaim})</span>} · 말한 횟수 {count} / {limit}
         </p>
         <h1 className="text-base font-bold">{state.session.topic}</h1>
       </header>

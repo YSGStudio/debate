@@ -5,6 +5,8 @@ import { useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import ArchiveButton from "../../archive-button";
 import TeamDebatesSection, { type TeamDebateItem } from "./team-debates";
+import EvidenceEditor from "./evidence-editor";
+import type { EvidenceItem } from "@/lib/evidence";
 
 interface ClassRow {
   id: string; name: string; grade_level: number; join_code: string; single_active_session: boolean;
@@ -12,6 +14,7 @@ interface ClassRow {
 interface StudentRow { id: string; display_name: string; is_active: boolean }
 interface SessionRow {
   id: string; topic: string; description: string | null; grade_level: number;
+  pro_claim: string | null; con_claim: string | null; evidence: EvidenceItem[];
   status: "draft" | "open" | "closed"; message_limit: number;
 }
 
@@ -24,6 +27,12 @@ export default function ClassPage() {
   const [topic, setTopic] = useState("");
   const [description, setDescription] = useState("");
   const [limit, setLimit] = useState(30);
+  const [proClaim, setProClaim] = useState("");
+  const [conClaim, setConClaim] = useState("");
+  const [drafting, setDrafting] = useState(false);
+  const [evidence, setEvidence] = useState<EvidenceItem[]>([]);
+  /** 근거 자료를 펼쳐 본 토론 */
+  const [evidenceOpen, setEvidenceOpen] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
@@ -49,6 +58,29 @@ export default function ClassPage() {
     if (!res.ok) { setError((parsed as { error?: string }).error ?? "실패했습니다."); return null; }
     await load();
     return parsed;
+  }
+
+  /** 이미 만든 토론의 근거 자료를 고칠 때마다 바로 저장한다 */
+  async function saveEvidence(sessionId: string, items: EvidenceItem[]) {
+    await call(`/api/sessions/${sessionId}`, { action: "evidence", evidence: items }, "PATCH");
+  }
+
+  /** 찬반 주장 초안을 받아 입력칸에 채운다. 저장은 교사가 확인한 뒤 만들기에서 한다. */
+  async function draftClaims() {
+    setError(null); setNotice(null); setDrafting(true);
+    const res = await fetch("/api/sessions/claims", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ topic, description: description || null }),
+    });
+    const body = (await res.json().catch(() => ({}))) as { proClaim?: string; conClaim?: string; error?: string };
+    setDrafting(false);
+    if (!res.ok || !body.proClaim || !body.conClaim) {
+      setError(body.error ?? "초안을 만들지 못했습니다. 직접 입력해 주세요.");
+      return;
+    }
+    setProClaim(body.proClaim);
+    setConClaim(body.conClaim);
   }
 
   if (error && !data) return <p className="text-red-700">{error}</p>;
@@ -93,6 +125,13 @@ export default function ClassPage() {
             <li key={s.id} className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-gray-200 bg-white p-4">
               <div className="min-w-0 flex-1">
                 <p className="font-bold">{s.topic}</p>
+                {s.pro_claim && s.con_claim && (
+                  <p className="text-xs text-gray-600">
+                    <span className="font-bold text-blue-700">찬성</span> {s.pro_claim}
+                    <span className="mx-1.5 text-gray-300">|</span>
+                    <span className="font-bold text-orange-600">반대</span> {s.con_claim}
+                  </p>
+                )}
                 <p className="text-xs text-gray-500">
                   <span className={`mr-2 inline-block rounded-full px-2 py-0.5 font-bold ${s.status === "open" ? "bg-green-100 text-green-800" : s.status === "draft" ? "bg-amber-100 text-amber-800" : "bg-gray-100 text-gray-700"}`}>{STATUS_LABEL[s.status]}</span>
                   초등 {s.grade_level}학년 · 1인 {s.message_limit}회까지
@@ -107,12 +146,29 @@ export default function ClassPage() {
                   <button onClick={() => call(`/api/sessions/${s.id}`, { action: "close" }, "PATCH")}
                     className="rounded-lg bg-gray-700 px-3 py-1.5 text-sm font-bold text-white">토론 종료</button>
                 )}
+                <button onClick={() => setEvidenceOpen(evidenceOpen === s.id ? null : s.id)}
+                  aria-expanded={evidenceOpen === s.id}
+                  className="rounded-lg border px-3 py-1.5 text-sm">📚 근거 자료 {(s.evidence ?? []).length}개</button>
                 <button onClick={() => router.push(`/teacher/sessions/${s.id}`)}
                   className="rounded-lg border px-3 py-1.5 text-sm">대시보드</button>
                 {s.status !== "open" && (
                   <ArchiveButton url={`/api/sessions/${s.id}`} onDone={load} />
                 )}
               </div>
+              {evidenceOpen === s.id && (
+                <div className="basis-full">
+                  <EvidenceEditor
+                    classId={classId}
+                    topic={s.topic}
+                    description={s.description ?? ""}
+                    proClaim={s.pro_claim ?? ""}
+                    conClaim={s.con_claim ?? ""}
+                    items={s.evidence ?? []}
+                    onChange={(items) => saveEvidence(s.id, items)}
+                    readOnly={s.status === "closed"}
+                  />
+                </div>
+              )}
             </li>
           ))}
           {data.sessions.length === 0 && <li className="rounded-2xl border border-dashed border-blue-200 bg-blue-50/50 p-5 text-center text-sm text-gray-600">아직 만든 개인 토론이 없습니다.</li>}
@@ -128,6 +184,41 @@ export default function ClassPage() {
             <input value={description} onChange={(e) => setDescription(e.target.value)} maxLength={300}
               placeholder="보충 설명 (선택)"
               className="rounded-xl border-2 border-gray-200 px-4 py-2 outline-none focus:border-blue-500" />
+            <div className="rounded-xl border border-blue-100 bg-white p-3">
+              <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                <p className="text-sm font-bold text-gray-700">찬성·반대가 각각 무엇을 주장하나요?</p>
+                <button type="button" onClick={draftClaims} disabled={drafting || topic.trim().length === 0}
+                  className="rounded-lg border border-blue-300 px-3 py-1.5 text-sm font-bold text-blue-700 disabled:border-gray-200 disabled:text-gray-400">
+                  {drafting ? "만드는 중..." : "✨ AI 초안 만들기"}
+                </button>
+              </div>
+              <p className="mb-2 text-xs text-gray-500">
+                AI 토론 친구와 채점이 이 문장을 기준으로 입장을 나눕니다. 초안을 확인하고 필요하면 고쳐 주세요.
+              </p>
+              <div className="flex flex-col gap-2">
+                <label className="flex items-center gap-2 text-sm">
+                  <span className="w-10 shrink-0 font-bold text-blue-700">찬성</span>
+                  <input value={proClaim} onChange={(e) => setProClaim(e.target.value)} maxLength={100}
+                    placeholder="예: 숙제를 없애야 한다"
+                    className="flex-1 rounded-xl border-2 border-gray-200 px-3 py-1.5 outline-none focus:border-blue-500" />
+                </label>
+                <label className="flex items-center gap-2 text-sm">
+                  <span className="w-10 shrink-0 font-bold text-orange-600">반대</span>
+                  <input value={conClaim} onChange={(e) => setConClaim(e.target.value)} maxLength={100}
+                    placeholder="예: 숙제는 계속 있어야 한다"
+                    className="flex-1 rounded-xl border-2 border-gray-200 px-3 py-1.5 outline-none focus:border-blue-500" />
+                </label>
+              </div>
+            </div>
+            <EvidenceEditor
+              classId={classId}
+              topic={topic}
+              description={description}
+              proClaim={proClaim}
+              conClaim={conClaim}
+              items={evidence}
+              onChange={setEvidence}
+            />
             <label className="text-sm text-gray-600">
               학생 1인당 말할 수 있는 횟수
               <input type="number" min={3} max={100} value={limit} onChange={(e) => setLimit(Number(e.target.value))}
@@ -135,10 +226,12 @@ export default function ClassPage() {
             </label>
             <button
               onClick={async () => {
-                const r = await call("/api/sessions", { classId, topic, description: description || null, messageLimit: limit });
-                if (r) { setTopic(""); setDescription(""); }
+                const r = await call("/api/sessions", {
+                  classId, topic, description: description || null, messageLimit: limit, proClaim, conClaim, evidence,
+                });
+                if (r) { setTopic(""); setDescription(""); setProClaim(""); setConClaim(""); setEvidence([]); }
               }}
-              disabled={topic.trim().length === 0}
+              disabled={topic.trim().length === 0 || proClaim.trim().length === 0 || conClaim.trim().length === 0}
               className="self-start rounded-xl bg-blue-600 px-5 py-2 font-bold text-white disabled:bg-gray-300">
               개인 토론 만들기
             </button>

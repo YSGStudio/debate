@@ -16,6 +16,8 @@ export const env = {
   get scoringModel() { return process.env.OPENAI_SCORING_MODEL || "gpt-4.1"; },
   /** 팀 토론 발언별 채점 (발언마다 1회라 소형 모델) */
   get judgeModel() { return process.env.OPENAI_JUDGE_MODEL || "gpt-4.1-mini"; },
+  /** 개인 토론 근거 자료 조사 (웹 검색). 토론을 만들 때만 부른다. */
+  get researchModel() { return process.env.OPENAI_RESEARCH_MODEL || "gpt-4.1"; },
   get studentSessionSecret() { return req("STUDENT_SESSION_SECRET"); },
   get teacherSessionSecret() { return req("TEACHER_SESSION_SECRET"); },
 };

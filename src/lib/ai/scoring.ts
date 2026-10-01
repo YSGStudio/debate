@@ -12,7 +12,7 @@ import {
   computeTotals,
   type AreaKey,
 } from "@/lib/prompts/scoring";
-import type { Stance } from "@/lib/prompts/debate";
+import type { Stance, StanceClaims } from "@/lib/prompts/debate";
 
 const area = (max: number, label: string) =>
   z.object({
@@ -60,7 +60,7 @@ export interface ScoredResult {
   model: string;
 }
 
-export interface ScoringInput {
+export interface ScoringInput extends StanceClaims {
   topic: string;
   studentStance: Stance;
   grade: number;
@@ -95,6 +95,8 @@ export async function scoreDebate(input: ScoringInput): Promise<ScoredResult> {
       topic: input.topic,
       studentStance: input.studentStance,
       grade: input.grade,
+      proClaim: input.proClaim,
+      conClaim: input.conClaim,
     }),
     prompt:
       "아래는 학생과 토론 친구(AI)가 주고받은 대화 전문이야.\n" +

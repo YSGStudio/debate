@@ -12,6 +12,8 @@ export interface StudentDebateState {
     id: string;
     topic: string;
     description: string | null;
+    proClaim: string | null;
+    conClaim: string | null;
     gradeLevel: number;
     status: SessionRow["status"];
     messageLimit: number;
@@ -102,6 +104,8 @@ export async function getOwnedClassless(
       id: session.id,
       topic: session.topic,
       description: session.description,
+      proClaim: session.pro_claim,
+      conClaim: session.con_claim,
       gradeLevel: session.grade_level,
       status: session.status,
       messageLimit: session.message_limit,

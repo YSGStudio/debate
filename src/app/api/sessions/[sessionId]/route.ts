@@ -10,14 +10,16 @@ import {
   restoreSession,
   sessionDeletionImpact,
   updateDraftSession,
+  updateSessionEvidence,
 } from "@/lib/db/sessions";
+import { EvidenceListSchema } from "@/lib/evidence";
 import { scoreWholeSession } from "@/lib/scoring-service";
 import { runInBackground } from "@/lib/background";
 import { isErr, jsonError, notFound, readJson, requireTeacher } from "@/lib/api";
 import { GRADE_LEVELS } from "@/lib/grade-presets";
 
 const Body = z.object({
-  action: z.enum(["open", "close", "update", "archive", "restore"]),
+  action: z.enum(["open", "close", "update", "archive", "restore", "evidence"]),
   topic: z.string().min(1).max(100).optional(),
   description: z.string().max(300).nullable().optional(),
   gradeLevel: z
@@ -26,6 +28,7 @@ const Body = z.object({
     .refine((v) => (GRADE_LEVELS as readonly number[]).includes(v))
     .optional(),
   messageLimit: z.number().int().min(3).max(100).optional(),
+  evidence: EvidenceListSchema.optional(),
 });
 
 /**
@@ -85,6 +88,15 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ sessionId: st
     const ok = await restoreSession(sessionId);
     if (!ok) return jsonError("되돌리지 못했습니다.", 409);
     return NextResponse.json({ restored: true });
+  }
+
+  // 근거 자료 검토 결과 저장 (추가·삭제). 진행 중에도 된다 — 다음 챗봇 응답부터 반영된다.
+  if (parsed.data.action === "evidence") {
+    if (!parsed.data.evidence) return jsonError("입력을 확인해 주세요.", 400);
+    if (owned.session.status === "closed") return jsonError("이미 끝난 토론입니다.", 409);
+    const updated = await updateSessionEvidence(sessionId, parsed.data.evidence);
+    if (!updated) return jsonError("저장하지 못했습니다.", 409);
+    return NextResponse.json({ session: updated });
   }
 
   if (parsed.data.action === "update") {

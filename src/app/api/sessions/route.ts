@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getOwnedClass } from "@/lib/db/classes";
 import { createSession } from "@/lib/db/sessions";
+import { EvidenceListSchema } from "@/lib/evidence";
 import { isErr, jsonError, notFound, readJson, requireTeacher } from "@/lib/api";
 
 const Body = z.object({
@@ -9,6 +10,11 @@ const Body = z.object({
   topic: z.string().min(1, "토론 주제를 입력해 주세요.").max(100, "주제는 100자 이내로 써주세요."),
   description: z.string().max(300, "설명은 300자 이내로 써주세요.").optional().nullable(),
   messageLimit: z.number().int().min(3).max(100).default(30),
+  // 교사가 확인한 양쪽 주장. 화면은 둘 다 요구하지만, 검증 스크립트 등은 없이 만들 수 있다.
+  proClaim: z.string().trim().max(100, "찬성 주장은 100자 이내로 써주세요.").optional().nullable(),
+  conClaim: z.string().trim().max(100, "반대 주장은 100자 이내로 써주세요.").optional().nullable(),
+  // 교사가 검토하고 남긴 근거 자료 (`POST /api/sessions/evidence` 로 찾은 것)
+  evidence: EvidenceListSchema.default([]),
 });
 
 /** 세션 생성 (R9). 학급의 학년을 스냅샷으로 복사한다 (R41). */
@@ -28,6 +34,8 @@ export async function POST(req: Request) {
     parsed.data.topic.trim(),
     parsed.data.description?.trim() || null,
     parsed.data.messageLimit,
+    { proClaim: parsed.data.proClaim || null, conClaim: parsed.data.conClaim || null },
+    parsed.data.evidence,
   );
   return NextResponse.json({ session });
 }

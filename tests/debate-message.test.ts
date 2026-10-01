@@ -99,7 +99,10 @@ vi.mock("@/lib/scoring-service", () => ({
   runScoring: async () => { calls.scoring++; return "done"; },
 }));
 
-vi.mock("@ai-sdk/openai", () => ({ createOpenAI: () => () => "model" }));
+// 실제 공급자처럼 호출 가능한 함수 + 내장 도구(웹 검색)를 가진다
+vi.mock("@ai-sdk/openai", () => ({
+  createOpenAI: () => Object.assign(() => "model", { tools: { webSearch: () => ({ type: "web_search" }) } }),
+}));
 vi.mock("@/lib/env", () => ({ env: { openaiApiKey: "k", debateModel: "m" } }));
 
 vi.mock("ai", () => ({

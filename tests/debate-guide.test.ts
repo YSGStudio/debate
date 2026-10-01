@@ -78,6 +78,19 @@ describe("토론 지침이 프롬프트에 실린다", () => {
     expect(p).toContain("통계 숫자나 연구 결과, 출처를 만들어내지 않는다");
   });
 
+  it("연구·전문가 의견은 준비된 목록에 있는 것만, 링크 없이 말로 전하라고 한다", () => {
+    const p = prompt();
+    expect(p).toContain("그 목록에 있는 것만");
+    expect(p).toContain("링크, 인터넷 주소, 사이트 이름을 괄호로 붙이지 않는다");
+    expect(p).toContain("한 답변에 자료는 **하나까지만** 쓴다");
+    expect(p).not.toContain("웹 검색을 쓸 수 있다");
+  });
+
+  it("분량 규칙은 검색 지침보다 뒤에 있다", () => {
+    const p = prompt();
+    expect(p.indexOf("# 분량 규칙")).toBeGreaterThan(p.indexOf("## 연구와 전문가 의견을 근거로 쓰기"));
+  });
+
   it("질문 수준을 6단계로 높이라고 한다", () => {
     expect(prompt()).toContain("질문의 수준 높이기");
     expect(prompt()).toContain("공정함과 편리함 중 하나를 골라야 한다면?");

@@ -19,6 +19,8 @@ const calls = {
   bumped: 0,
   systemPrompt: "",
   userPrompt: "",
+  saved: "",
+  toolNames: [] as string[],
 };
 
 vi.mock("@/lib/session/student", () => ({
@@ -68,6 +70,7 @@ vi.mock("@/lib/db/participations", () => ({
     })),
   appendMessage: async (_pid: string, seq: number, role: string, content: string) => {
     calls.appended.push({ seq, role });
+    calls.saved = content;
     return { id: "m1", participation_id: "p1", seq, role, content, created_at: "" };
   },
   // 첫 인사 경로에서 이 함수가 불리면 계약 위반이다.
@@ -80,17 +83,25 @@ vi.mock("@/lib/db/rate-limit", () => ({
   takeMessageSlot: async () => state.rateLimitOk,
 }));
 
-vi.mock("@ai-sdk/openai", () => ({ createOpenAI: () => () => "model" }));
+// 실제 공급자처럼 호출 가능한 함수 + 내장 도구(웹 검색)를 가진다
+vi.mock("@ai-sdk/openai", () => ({
+  createOpenAI: () => Object.assign(() => "model", { tools: { webSearch: () => ({ type: "web_search" }) } }),
+}));
 vi.mock("@/lib/env", () => ({ env: { openaiApiKey: "k", debateModel: "m" } }));
 
 vi.mock("ai", () => ({
-  streamText: (opts: { system: string; prompt: string; onEnd?: (e: { text: string }) => Promise<void> }) => {
+  streamText: (opts: {
+    system: string; prompt: string; tools?: Record<string, unknown>;
+    onEnd?: (e: { text: string }) => Promise<void>;
+  }) => {
     calls.streamText++;
+    calls.toolNames = Object.keys(opts.tools ?? {});
     calls.systemPrompt = opts.system;
     calls.userPrompt = opts.prompt;
     return {
       toTextStreamResponse: () => {
-        void opts.onEnd?.({ text: "안녕! 나는 반대야. 너는 왜 그렇게 생각해?" });
+        // 모델이 기억에서 링크를 붙이는 경우
+        void opts.onEnd?.({ text: "안녕! 나는 반대야. ([who.int](https://who.int/x)) 너는 왜 그렇게 생각해?" });
         return new Response("안녕! 나는 반대야. 너는 왜 그렇게 생각해?");
       },
     };
@@ -117,6 +128,8 @@ beforeEach(() => {
   calls.bumped = 0;
   calls.systemPrompt = "";
   calls.userPrompt = "";
+  calls.saved = "";
+  calls.toolNames = [];
 });
 
 describe("첫 인사 라우트 (R18)", () => {
@@ -127,6 +140,16 @@ describe("첫 인사 라우트 (R18)", () => {
     await new Promise((r) => setTimeout(r, 10));
 
     expect(calls.appended).toEqual([{ seq: 1, role: "bot" }]);
+  });
+
+  it("토론 중에는 웹 검색을 하지 않고, 저장하는 말에서는 링크를 지운다", async () => {
+    const res = await POST(req());
+    await res.text();
+    await new Promise((r) => setTimeout(r, 10));
+
+    // 실시간 검색은 응답을 길고 느리게 만들어 뺐다. 근거는 미리 조사한 목록에서만 쓴다.
+    expect(calls.toolNames).toEqual([]);
+    expect(calls.saved).toBe("안녕! 나는 반대야. 너는 왜 그렇게 생각해?");
   });
 
   it("학생 메시지를 만들지 않는다 — 상한을 깎지 않는다 (R21, R37)", async () => {

@@ -37,7 +37,7 @@ export default function TeacherHome() {
     const res = await fetch("/api/classes", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ name, gradeLevel: grade, createDebate: true }),
+      body: JSON.stringify({ name, gradeLevel: grade }),
     });
     setBusy(false);
     if (!res.ok) {

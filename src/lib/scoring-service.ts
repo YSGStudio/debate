@@ -39,6 +39,8 @@ export async function runScoring(
       topic: session.topic,
       studentStance: participation.stance,
       grade: session.grade_level,
+      proClaim: session.pro_claim,
+      conClaim: session.con_claim,
       transcript,
     });
 

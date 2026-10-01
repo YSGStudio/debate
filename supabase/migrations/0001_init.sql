@@ -67,6 +67,9 @@ create table if not exists debate_sessions (
   class_id      uuid not null references classes(id) on delete cascade,
   topic         text not null check (char_length(topic) between 1 and 100),
   description   text check (char_length(description) <= 300),
+  pro_claim     text check (char_length(pro_claim) <= 100),  -- 찬성 쪽 주장 한 문장 (교사 확인)
+  con_claim     text check (char_length(con_claim) <= 100),  -- 반대 쪽 주장 한 문장 (교사 확인)
+  evidence      jsonb not null default '[]'::jsonb,           -- 미리 조사한 근거 자료 (교사 검토)
   grade_level   int  not null check (grade_level between 3 and 6),
   status        session_status not null default 'draft',
   message_limit int  not null default 30 check (message_limit between 3 and 100),

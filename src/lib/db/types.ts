@@ -1,3 +1,5 @@
+import type { EvidenceItem } from "@/lib/evidence";
+
 export type SessionStatus = "draft" | "open" | "closed";
 export type Stance = "pro" | "con";
 export type MessageRole = "student" | "bot";
@@ -27,6 +29,11 @@ export interface SessionRow {
   class_id: string;
   topic: string;
   description: string | null;
+  /** 찬성·반대가 각각 주장하는 한 문장. 교사가 확인한 값. 옛 세션은 null. */
+  pro_claim: string | null;
+  con_claim: string | null;
+  /** 미리 조사해 교사가 검토한 근거 자료. 토론 AI 는 이 안에서만 연구·전문가 의견을 인용한다. */
+  evidence: EvidenceItem[];
   grade_level: number;
   status: SessionStatus;
   message_limit: number;

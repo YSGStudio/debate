@@ -18,6 +18,8 @@ import { triageMessage } from "@/lib/ai/triage";
 import { runScoring } from "@/lib/scoring-service";
 import { runInBackground } from "@/lib/background";
 import { buildDebateSystemPrompt } from "@/lib/prompts/debate";
+import { stripLinksTransform } from "@/lib/ai/strip-links-transform";
+import { stripLinks } from "@/lib/strip-links";
 import { jsonError, readJson } from "@/lib/api";
 
 export const maxDuration = 60;
@@ -104,6 +106,9 @@ export async function POST(req: Request) {
       description: session.description,
       studentStance: participation.stance,
       grade: session.grade_level,
+      proClaim: session.pro_claim,
+      conClaim: session.con_claim,
+      evidence: session.evidence,
     }),
     messages: [
       ...history.map((m) => ({
@@ -113,9 +118,11 @@ export async function POST(req: Request) {
       { role: "user" as const, content: parsed.data.content },
     ],
     temperature: 0.7,
+    // 링크는 학생에게 보이지 않게 지운다 (근거 자료 주소는 애초에 넘기지 않는다).
+    experimental_transform: stripLinksTransform(),
     onEnd: async ({ text }) => {
       try {
-        await appendMessage(participation.id, seq + 1, "bot", text);
+        await appendMessage(participation.id, seq + 1, "bot", stripLinks(text));
       } catch (e) {
         console.error("[message] 챗봇 응답 저장 실패:", e);
       }

@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createClass, listClasses } from "@/lib/db/classes";
-import { createSession } from "@/lib/db/sessions";
 import { isErr, jsonError, readJson, requireTeacher } from "@/lib/api";
 import { GRADE_LEVELS } from "@/lib/grade-presets";
 
@@ -11,7 +10,6 @@ const Body = z.object({
     .number()
     .int()
     .refine((v) => (GRADE_LEVELS as readonly number[]).includes(v), "학년은 3~6만 가능합니다."),
-  createDebate: z.boolean().optional(),
 });
 
 export async function GET() {
@@ -29,8 +27,5 @@ export async function POST(req: Request) {
   if (!parsed.success) return jsonError(parsed.error.issues[0]?.message ?? "입력을 확인해 주세요.", 400);
 
   const cls = await createClass(auth.teacherId, parsed.data.name, parsed.data.gradeLevel);
-  if (parsed.data.createDebate) {
-    await createSession(cls.id, cls.grade_level, parsed.data.name.trim(), null, 30);
-  }
   return NextResponse.json({ class: cls });
 }
